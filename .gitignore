@@ -1,0 +1,71 @@
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+pip-wheel-metadata/
+
+# ---------------------------------------------------------------------------
+# Virtual environments
+# ---------------------------------------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# ---------------------------------------------------------------------------
+# Tooling caches
+# ---------------------------------------------------------------------------
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---------------------------------------------------------------------------
+# Editors / IDEs / OS
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------------------------------------------------------------------------
+# Solver (PuLP / CBC) scratch files
+# ---------------------------------------------------------------------------
+*.lp
+*.mps
+*.sol
+*.log
+
+# ---------------------------------------------------------------------------
+# Generated run outputs (the example scripts write these to the project root)
+#   plots / animations:  planner_result, edge_profile, speed_profiles,
+#   pref_examples, route_plane, network, simulation.gif, eecm_*_front, ...
+#   solution logs:       eecm_net<NN>_depart<HHMM>_solutions.json
+# `/` anchors to the repo root, so dataset/png/*.png is NOT affected.
+# ---------------------------------------------------------------------------
+/*.png
+/*.gif
+/*.mp4
+/eecm_net*_solutions.json
+
+# ---------------------------------------------------------------------------
+# Fixed 120-network benchmark
+# ---------------------------------------------------------------------------
+# The dataset/ folder is COMMITTED on purpose: it is the fixed, numbered
+# reference (001-120), and regenerating it from seeds changes whenever the
+# generation code changes -- so the JSON must be pinned in git for reproducible
+# results. To slim the repo you may exclude the (regenerable) images instead;
+# uncomment the next line and rebuild visuals with `python -m examples.build_dataset`:
+# dataset/png/

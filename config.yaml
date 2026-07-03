@@ -1,0 +1,129 @@
+# =====================================================================
+# Central configuration for the bi-objective TD route planner.
+# Edit values HERE; the scripts read this file and take no numeric CLI args.
+#   python -m examples.run_planner          # uses ./config.yaml
+#   python -m examples.run_planner --config other.yaml
+# All time values are minutes from midnight (7:00 = 420, 21:00 = 1260).
+# =====================================================================
+
+# Which FIXED dataset network to operate on (dataset/networks/net_NNN.json).
+# We currently work on network 001; change this number to run on another one.
+network_number: "001"
+
+# ---------------------------------------------------------------------
+# Road-network structure (time-dependent travel-time / speed model, ref [11])
+# ---------------------------------------------------------------------
+network:
+  area: 100.0             # side of the square the nodes are scattered in
+  free_flow_speed: 2.0    # distance units per minute (scales the speed matrix)
+  t_start: 420            # start of the modelled day (7:00)
+  t_end: 1260             # end of the modelled day (21:00)
+
+  # Four unequal time periods [start, end] (Verbeeck et al. 2014, Table 1)
+  horizons:
+    - [420, 540]          # 07-09  morning peak
+    - [540, 1020]         # 09-17  normal
+    - [1020, 1140]        # 17-19  evening peak
+    - [1140, 1260]        # 19-21  normal
+
+  # Speed matrix v_{c,k}: arc category -> multiplier per period [07-09, 09-17, 17-19, 19-21]
+  speed_categories:
+    always_busy:     [0.5, 0.81, 0.5, 0.81]
+    morning_peak:    [0.5, 0.7,  1.0, 1.5]
+    two_peaks:       [0.5, 1.5,  0.5, 1.5]
+    evening_peak:    [1.0, 1.5,  0.5, 0.7]
+    seldom_traveled: [1.5, 1.5,  1.5, 1.5]
+
+# ---------------------------------------------------------------------
+# Random instance generation
+# ---------------------------------------------------------------------
+instance:
+  n_nodes: 40             # |V|
+  seed: 7                 # RNG seed for reproducibility
+  pref_density: 0.5       # rho: fraction of arcs that are preference arcs
+  bp_range: [1, 10]       # basic preference score bp ~ U{lo..hi} on preference arcs
+  beta_range: [0.2, 0.8]  # per-arc beta ~ U[lo, hi]
+  pref_state_dur: [60, 240]   # each preference state lasts U[lo, hi] minutes
+  bidirectional: true     # add both arc directions (each with own attributes)
+  n_region_cols: 4        # region grid for the NSGA-II encoding
+  n_region_rows: 3
+
+# ---------------------------------------------------------------------
+# Query: origin/destination and departure time
+# ---------------------------------------------------------------------
+query:
+  od_strategy: farthest   # "farthest" (longest OD) or "random"
+  od_seed: 0              # seed for OD picking
+  t0: null                # departure clock time; null = network t_start
+  edge: null              # [i, j] for plot_edge; null = auto-pick a preference arc
+
+# ---------------------------------------------------------------------
+# Problem-specific NSGA-II
+# ---------------------------------------------------------------------
+nsga2:
+  pop_size: 50
+  crossover_prob: 0.85
+  mutation_prob: 0.15
+  gmax: 5
+  max_decode: 6           # solutions decoded per chromosome
+  seed: 1
+
+# ---------------------------------------------------------------------
+# Exact epsilon-constraint method (small instances only)
+# ---------------------------------------------------------------------
+exact:
+  delta: 1                # epsilon step (eq. 13); eps increases by delta each P2 solve
+  time_limit: null        # per-solve CBC limit in seconds; null = truly exact (slow)
+  max_iter: 1000
+  eps_start: null         # eecm_iterate.py: first epsilon; null = compute f1^N + delta
+                          #   (set it, e.g. 27, to skip the slow f1^N endpoint solve)
+
+# ---------------------------------------------------------------------
+# run_planner.py behaviour
+# ---------------------------------------------------------------------
+run:
+  solver: nsga2           # nsga2 | exact | both
+  w1: 0.8                 # fuzzy weight on the preference score (omega_f1)
+  plot: true
+  plot_out: planner_result.png
+
+# ---------------------------------------------------------------------
+# plot_edge.py behaviour
+# ---------------------------------------------------------------------
+plot_edge:
+  out: edge_profile.png
+
+# ---------------------------------------------------------------------
+# Fixed 120-network benchmark (build_dataset.py)
+#   networks are numbered 001..120 in size order; seed = base_seed + number
+# ---------------------------------------------------------------------
+dataset:
+  out_dir: dataset
+  sizes: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 200]
+  instances_per_size: 10
+  base_seed: 0
+  save_png: true
+  png_dpi: 110
+
+# ---------------------------------------------------------------------
+# Agent simulation (simulate_agent.py) on the network_number above.
+#   route = the node order the agent follows, O..D (a connected path).
+# ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Plot one route as a point in the (f1 preference, f2 travel-time) plane
+# (plot_route_plane.py). Uses simulation.route and simulation.t0 below.
+# ---------------------------------------------------------------------
+plane:
+  show_pareto: true         # overlay the NSGA-II Pareto front for the same O,D,t0
+  show_cloud: true          # overlay a cloud of random feasible routes for context
+  cloud_size: 80            # number of random routes in the cloud
+  out: route_plane.png      # used only if you uncomment the save line in the script
+
+simulation:
+  route: [9, 1, 8, 4, 3, 2, 10]               # node order O..D (connected path); null = auto shortest O->D
+                            #   e.g. net_001: [9, 8, 3, 2, 10]
+  t0: 420                   # departure clock time (7:00); null = network t_start
+  free_flow_speed: null     # agent base speed override; null = the network's stored value
+  out: simulation.gif       # used only if you uncomment the save line in the script
+  fps: 20
+  frame_minutes: 0.5        # simulated minutes advanced per animation frame
