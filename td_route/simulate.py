@@ -92,33 +92,37 @@ def pref_time_integral(net, i, j, a, b):
     return total
 
 
-def build_journey(net, route, t0):
-    """List of segment dicts for the route. Raises on a missing arc.
+def build_journey(net, route, t0, dep_times=None):
+    """List of travel-segment dicts for the route. Raises on a missing arc.
 
-    Each segment: {i, j, t_dep, t_arr, u, length, cat, bps, pref_before}.
+    Each segment: {i, j, arr_at_i, t_dep, t_arr, u, length, cat, bps, pref_before}.
+    `arr_at_i` is when the agent ARRIVES at node i; `t_dep` is when it LEAVES.
+    If dep_times is given (departure time from each of route[:-1]), the agent may
+    WAIT at a node (t_dep > arr_at_i); otherwise it leaves immediately (no wait).
 
     The per-arc preference `u` is the TIME-AVERAGE of u_ij(t) over the arc's
-    traversal (= integral / travel-time). When the preference does not change
-    while on the arc -- the usual case, since states last 60-240 min -- this
-    equals the departure-time value u_ij(t_dep), matching the paper's
-    f1 = sum u_ijt x_ijt. If a state boundary is crossed mid-arc, the two
-    levels are blended (time-weighted), so mid-arc changes ARE reflected.
+    traversal (= integral / travel-time); if a state boundary is crossed mid-arc
+    the two levels are blended (time-weighted).
     """
     if len(route) < 2:
         raise SystemExit("route must list at least two nodes (O .. D)")
     segments = []
-    t = float(t0)
+    t = float(t0)                    # arrival time at the current node route[k]
     pref_acc = 0.0
-    for i, j in zip(route, route[1:]):
+    for k, (i, j) in enumerate(zip(route, route[1:])):
         if not net.G.has_edge(i, j):
             raise SystemExit(f"route is not a connected path: no arc {i}->{j}")
-        bps = edge_breakpoints(net, i, j, t)
+        arr_at_i = t
+        # clamp to the arrival: dep_times from the (integer-ceil) ILP can round
+        # a hair below the continuous-FIFO arrival used here; never depart early.
+        t_dep = max(float(dep_times[k]), arr_at_i) if dep_times is not None else t
+        bps = edge_breakpoints(net, i, j, t_dep)
         t_arr = bps[-1][0]
-        T = t_arr - t
-        u = (pref_time_integral(net, i, j, t, t_arr) / T if T > 0
-             else net.preference(i, j, t))
-        segments.append({"i": i, "j": j, "t_dep": t, "t_arr": t_arr,
-                         "u": u, "length": net.G[i][j]["length"],
+        T = t_arr - t_dep
+        u = (pref_time_integral(net, i, j, t_dep, t_arr) / T if T > 0
+             else net.preference(i, j, t_dep))
+        segments.append({"i": i, "j": j, "arr_at_i": arr_at_i, "t_dep": t_dep,
+                         "t_arr": t_arr, "u": u, "length": net.G[i][j]["length"],
                          "cat": net.G[i][j]["speed_cat"], "bps": bps,
                          "pref_before": pref_acc})
         pref_acc += u
@@ -133,46 +137,55 @@ def speed_at(net, seg, tc):
 
 
 def sample_journey(net, segments, frame_minutes=0.5):
-    """Sample the whole journey on a uniform clock grid.
+    """Sample the whole journey (waiting included) on a uniform clock grid.
 
-    Returns a dict of per-frame arrays: clock, seg_idx, frac, x, y, speed,
-    cumpref, elapsed. The last frame is exactly the arrival at D.
+    Each segment owns the interval [arr_at_i, t_arr]: first a WAIT at node i
+    over [arr_at_i, t_dep] (only if the agent waited), then TRAVEL over
+    [t_dep, t_arr]. Consecutive segments tile the timeline with no gaps.
+
+    Returns per-frame arrays: clock, seg_idx, frac, x, y, speed, cumpref,
+    elapsed, waiting (bool). During a wait the agent sits at node i (speed 0,
+    preference flat); seg_idx points at the arc it is about to take.
     """
     pos = {v: (net.G.nodes[v]["x"], net.G.nodes[v]["y"]) for v in net.G.nodes}
-    t0 = segments[0]["t_dep"]
+    start = segments[0]["arr_at_i"]
     t_end = segments[-1]["t_arr"]
-    n = max(2, int(round((t_end - t0) / frame_minutes)) + 1)
+    n = max(2, int(round((t_end - start) / frame_minutes)) + 1)
 
     out = {k: [] for k in ("clock", "seg_idx", "frac", "x", "y",
-                           "speed", "cumpref", "elapsed")}
+                           "speed", "cumpref", "elapsed", "waiting")}
     s = 0
     for f in range(n):
-        tc = t0 + f * frame_minutes
+        tc = start + f * frame_minutes
         if f == n - 1 or tc > t_end:
             tc = t_end
         while s < len(segments) - 1 and tc > segments[s]["t_arr"]:
             s += 1
         seg = segments[s]
-        length = seg["length"] or 1.0
-        frac = min(1.0, max(0.0, _dist_at(seg["bps"], tc) / length))
         xi, yi = pos[seg["i"]]
         xj, yj = pos[seg["j"]]
-        dur = seg["t_arr"] - seg["t_dep"]
-        # preference earned so far on this arc = integral of u_ij(t) up to tc,
-        # normalised by the arc's travel time -> piecewise-linear, and its
-        # slope changes if a preference state boundary falls inside the arc.
-        if dur > 0:
-            part = pref_time_integral(net, seg["i"], seg["j"],
-                                      seg["t_dep"], tc) / dur
-        else:
-            part = seg["u"]
+
+        if tc < seg["t_dep"]:                     # WAITING at node i
+            out["frac"].append(0.0)
+            out["x"].append(xi)
+            out["y"].append(yi)
+            out["speed"].append(0.0)
+            out["cumpref"].append(seg["pref_before"])
+            out["waiting"].append(True)
+        else:                                     # TRAVELLING on arc i->j
+            length = seg["length"] or 1.0
+            frac = min(1.0, max(0.0, _dist_at(seg["bps"], tc) / length))
+            dur = seg["t_arr"] - seg["t_dep"]
+            part = (pref_time_integral(net, seg["i"], seg["j"], seg["t_dep"], tc)
+                    / dur) if dur > 0 else seg["u"]
+            out["frac"].append(frac)
+            out["x"].append(xi + (xj - xi) * frac)
+            out["y"].append(yi + (yj - yi) * frac)
+            out["speed"].append(speed_at(net, seg, tc))
+            out["cumpref"].append(seg["pref_before"] + part)
+            out["waiting"].append(False)
 
         out["clock"].append(tc)
         out["seg_idx"].append(s)
-        out["frac"].append(frac)
-        out["x"].append(xi + (xj - xi) * frac)
-        out["y"].append(yi + (yj - yi) * frac)
-        out["speed"].append(speed_at(net, seg, tc))
-        out["cumpref"].append(seg["pref_before"] + part)
-        out["elapsed"].append(tc - t0)
+        out["elapsed"].append(tc - start)
     return out

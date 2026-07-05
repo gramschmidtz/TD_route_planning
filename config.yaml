@@ -75,8 +75,13 @@ exact:
   delta: 1                # epsilon step (eq. 13); eps increases by delta each P2 solve
   time_limit: null        # per-solve CBC limit in seconds; null = truly exact (slow)
   max_iter: 1000
-  eps_start: null         # eecm_iterate.py: first epsilon; null = compute f1^N + delta
-                          #   (set it, e.g. 27, to skip the slow f1^N endpoint solve)
+  eps_start: null         # first epsilon override; null = compute f1^N + delta
+  waiting: true          # allow waiting at nodes (constraint 9'); then
+                          #   f2 = arrival(D) - t0 (includes waiting time)
+  budget: 840             # time-expansion horizon = t0 + budget (minutes of elapsed
+                          #   time).  null  = whole day (t_end - t0);
+                          #   "safe" = safe bound = sum of the |V|-1 slowest arcs;
+                          #   <int>  = use as given.
 
 # ---------------------------------------------------------------------
 # run_planner.py behaviour
@@ -124,6 +129,11 @@ simulation:
                             #   e.g. net_001: [9, 8, 3, 2, 10]
   t0: 420                   # departure clock time (7:00); null = network t_start
   free_flow_speed: null     # agent base speed override; null = the network's stored value
+  # --- to animate a WAITING solution from the exact method: ---
+  dep_times: null           # per-node departure times (enables waiting); null = no waiting
+  solution_json: eecm_net001_depart0700_pf1I.json       # load route + dep_times from an EECM solutions JSON, e.g.
+                            #   eecm_net001_depart0700_solutions.json (overrides route/dep_times)
+  solution_id: f1I         # which solution in that file, e.g. "sol3" (null = first)
   out: simulation.gif       # used only if you uncomment the save line in the script
   fps: 20
   frame_minutes: 0.5        # simulated minutes advanced per animation frame

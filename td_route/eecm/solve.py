@@ -29,6 +29,9 @@ def solve_single(te: TimeExpanded, sense, *, eps=None, fix_f1=None, fix_f2=None,
     """
     if not te.reachable_destination:
         return None
+    if getattr(te, "waiting", False):
+        return _solve_waiting(te, sense, eps=eps, fix_f1=fix_f1, fix_f2=fix_f2,
+                              time_limit=time_limit, msg=msg)
 
     prob = pulp.LpProblem("Pk", pulp.LpMinimize)
     x = {k: pulp.LpVariable(f"x_{k[0]}_{k[1]}_{k[2]}", cat="Binary")
@@ -95,3 +98,103 @@ def extract_solution(te: TimeExpanded, x) -> Solution:
         if len(route) > len(te.nodes) + 1:        # safety against cycles
             break
     return Solution(route=route, f1=float(f1), f2=int(f2), meta={"t0": te.t0})
+
+
+# -------------------------------------------------------------------------- #
+# Waiting model: time-expanded graph with wait arcs (equivalent to the
+# summation constraint (9') but sparse). f2 = arrival(D) - t0, i.e. total
+# elapsed time INCLUDING waiting.
+# -------------------------------------------------------------------------- #
+def _solve_waiting(te, sense, *, eps, fix_f1, fix_f2, time_limit, msg):
+    prob = pulp.LpProblem("Pk_wait", pulp.LpMinimize)
+    x = {a: pulp.LpVariable(f"x_{a[0]}_{a[1]}_{a[2]}", cat="Binary")
+         for a in te.arcs}
+    w = {a: pulp.LpVariable(f"w_{a[0]}_{a[1]}", cat="Binary") for a in te.waits}
+
+    O, D, t0 = te.O, te.D, te.t0
+    f1 = pulp.lpSum(te.arcs[a][1] * x[a] for a in te.arcs)
+    into_D = [a for a in te.arcs if a[1] == D]           # arcs (i, D, t)
+    # arrival at D = t + c for the single selected arc into D; f2 = arrival - t0
+    f2 = pulp.lpSum((a[2] + te.arcs[a][0]) * x[a] for a in into_D) - t0
+
+    prob += (f2 if sense == "min_f2" else -f1)
+
+    # (3) exactly one arc leaves O at t0
+    prob += pulp.lpSum(x[a] for a in te.departures.get((O, t0), [])) == 1, "out_O"
+    # (4) exactly one arc enters D
+    prob += pulp.lpSum(x[a] for a in into_D) == 1, "in_D"
+
+    # time-node flow balance for every reachable (v, tau), v not in {O, D}
+    for (v, tau) in te.time_nodes:
+        if v == O or v == D:
+            continue
+        inflow = [x[a] for a in te.arrivals.get((v, tau), [])]
+        if (v, tau - 1) in te.waits:
+            inflow.append(w[(v, tau - 1)])
+        outflow = [x[a] for a in te.departures.get((v, tau), [])]
+        if (v, tau) in te.waits:
+            outflow.append(w[(v, tau)])
+        if inflow or outflow:
+            prob += pulp.lpSum(inflow) == pulp.lpSum(outflow), f"bal_{v}_{tau}"
+
+    # (8) each node entered at most once (via a travel arc; waiting excluded)
+    heads = {a[1] for a in te.arcs}
+    for v in heads:
+        if v == O:
+            continue
+        prob += pulp.lpSum(x[a] for a in te.arcs if a[1] == v) <= 1, f"once_{v}"
+
+    if eps is not None:
+        prob += f1 >= eps, "eps_cut"
+    if fix_f1 is not None:
+        prob += f1 == fix_f1, "fix_f1"
+    if fix_f2 is not None:
+        prob += f2 == fix_f2, "fix_f2"
+
+    prob.solve(pulp.PULP_CBC_CMD(msg=msg, timeLimit=time_limit))
+    if pulp.LpStatus[prob.status] != "Optimal":
+        return None
+    return _extract_waiting(te, x, w)
+
+
+def _extract_waiting(te, x, w) -> Solution:
+    """Walk O..D through active travel/wait arcs; f2 = arrival(D) - t0.
+
+    Records the full timed schedule in meta:
+      timeline  : [{node, arrival, departure}]  (departure=None at D)
+      dep_times : departure time from each node of the route except D
+    so the waiting (= departure - arrival at a node) is fully preserved and the
+    journey -- including waits -- can be replayed by the simulator.
+    """
+    O, D, t0 = te.O, te.D, te.t0
+    route, f1 = [O], 0.0
+    timeline = []
+    cur, tau = O, t0
+    arr_here = t0                                 # arrival time at `cur`
+    steps = 0
+    limit = len(te.time_nodes) + 2
+    while cur != D and steps < limit:
+        steps += 1
+        dep = None
+        for a in te.departures.get((cur, tau), []):
+            if x[a].value() and x[a].value() > 0.5:
+                dep = a
+                break
+        if dep is not None:
+            c, u = te.arcs[dep]
+            timeline.append({"node": cur, "arrival": arr_here, "departure": tau})
+            f1 += u
+            route.append(dep[1])
+            arr_here = tau + c                     # arrival at the next node
+            cur, tau = dep[1], tau + c
+            continue
+        if (cur, tau) in te.waits and w[(cur, tau)].value() and \
+                w[(cur, tau)].value() > 0.5:
+            tau += 1
+            continue
+        break
+    timeline.append({"node": D, "arrival": arr_here, "departure": None})
+    dep_times = [e["departure"] for e in timeline[:-1]]
+    return Solution(route=route, f1=float(f1), f2=int(arr_here - t0),
+                    meta={"t0": t0, "arrival": arr_here, "waiting": True,
+                          "timeline": timeline, "dep_times": dep_times})

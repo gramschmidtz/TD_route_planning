@@ -58,7 +58,7 @@ desktop.ini
 /*.png
 /*.gif
 /*.mp4
-/eecm_net*_solutions.json
+/eecm_net*.json
 
 # ---------------------------------------------------------------------------
 # Fixed 120-network benchmark

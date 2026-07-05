@@ -61,14 +61,20 @@ class SolutionLog:
             json.dump(self.rows, f, indent=2)
 
     def add(self, sol_id, eps, s, seconds):
-        self.rows.append({
+        row = {
             "sol": sol_id,
             "eps": (None if eps is None else round(float(eps), 3)),
             "f1": s.f1, "f2": s.f2,
             "route": list(s.route),
             "arrival": s.meta.get("arrival"),
             "solve_seconds": round(seconds, 3),
-        })
+        }
+        # waiting solutions also carry the timed schedule, so the animation can
+        # replay the waits (dep_times = departure time from each node except D)
+        if s.meta.get("dep_times") is not None:
+            row["dep_times"] = s.meta["dep_times"]
+            row["timeline"] = s.meta.get("timeline")
+        self.rows.append(row)
         self._write()
 
     def keep_non_dominated(self):
@@ -152,8 +158,11 @@ def main():
     tl = ex.get("time_limit")
     max_iter = ex.get("max_iter", 1000)
 
-    print(f"network {num}  O={O}  D={D}  depart {_hms(t0)}")
-    te = TimeExpanded(net, O, D, t0=t0)
+    waiting = ex.get("waiting", False)
+    print(f"network {num}  O={O}  D={D}  depart {_hms(t0)}"
+          f"{'   [waiting allowed; f2 = arrival - t0]' if waiting else ''}")
+    te = TimeExpanded(net, O, D, t0=t0, waiting=waiting,
+                      budget=ex.get("budget"))
     print(f"time-expanded vars = {len(te.arcs)}   budget = {te.budget} min\n")
 
     ep = compute_endpoints(te, delta=delta, time_limit=tl, verbose=True)

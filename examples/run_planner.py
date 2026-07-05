@@ -55,7 +55,9 @@ def main():
         fronts["exact"] = epsilon_constraint(
             net, O, D, t0=t0, delta=ex_c.get("delta", 1),
             time_limit=ex_c.get("time_limit"),
-            max_iter=ex_c.get("max_iter", 1000), verbose=True)
+            max_iter=ex_c.get("max_iter", 1000),
+            waiting=ex_c.get("waiting", False), budget=ex_c.get("budget"),
+            verbose=True)
         _print_front("EXACT epsilon-constraint", fronts["exact"],
                      time.time() - t)
     if solver in ("nsga2", "both"):

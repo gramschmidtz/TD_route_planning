@@ -17,25 +17,38 @@ from __future__ import annotations
 class TimeExpanded:
     """Reachable (i, j, t) tuples with their travel time and preference."""
 
-    def __init__(self, net, O, D, t0=None, max_horizon=None, budget=None):
+    def __init__(self, net, O, D, t0=None, max_horizon=None, budget=None,
+                 waiting=False):
         self.net = net
         self.O, self.D = O, D
         self.t0 = net.t_start if t0 is None else t0
         self.t_end = net.t_end if max_horizon is None else max_horizon
+        self.waiting = waiting
 
-        # A simple route uses at most |V|-1 arcs. Summing the worst-case travel
-        # time of the (|V|-1) slowest arcs gives a SAFE upper bound on the
-        # travel time of any feasible (simple) route -- so pruning states past
-        # t0 + budget cannot remove any Pareto-optimal route (exactness kept),
-        # while it kills the cyclic state blow-up of the time expansion.
-        if budget is None:
-            budget = self._safe_time_budget()
-        self.budget = budget
-        self.t_horizon = min(self.t_end, self.t0 + budget)
-
-        # arcs[(i, j, t)] = (c_ijt, u_ijt)
+        # arcs[(i, j, t)] = (c_ijt, u_ijt)   -- travel arcs, used by both models
         self.arcs: dict = {}
-        self._build()
+
+        # The time-expansion horizon is t0 + budget (a cap on elapsed time).
+        #   * budget = None          -> the whole day (t_end - t0), both modes.
+        #   * budget = "safe"/"auto" -> a SAFE upper bound = sum of the (|V|-1)
+        #     slowest arc travel times; no simple route can exceed it, so pruning
+        #     past it keeps exactness while taming the state blow-up (no-wait).
+        #   * budget = <int>         -> used as given (minutes).
+        if budget is None:
+            budget = self.t_end - self.t0
+        elif isinstance(budget, str):
+            budget = self._safe_time_budget()
+        self.budget = int(budget)
+        self.t_horizon = min(self.t_end, self.t0 + self.budget)
+
+        if waiting:
+            self.waits: set = set()          # wait arcs (v, tau) : (v,tau)->(v,tau+1)
+            self.time_nodes: set = set()     # reachable (v, tau)
+            self.arrivals: dict = {}         # (v, tau) -> [travel arcs ending here]
+            self.departures: dict = {}       # (v, tau) -> [travel arcs leaving here]
+            self._build_waiting()
+        else:
+            self._build()
 
     def _safe_time_budget(self) -> int:
         net = self.net
@@ -70,6 +83,42 @@ class TimeExpanded:
                 if j != D and (j, tp) not in seen:
                     seen.add((j, tp))
                     queue.append((j, tp))
+
+    def _build_waiting(self):
+        """Time-expanded graph WITH waiting: besides travel arcs, a node may sit
+        idle via wait arcs (v, tau) -> (v, tau+1). The origin cannot wait (it
+        departs only at t0, constraint (3)); the destination absorbs the flow."""
+        net, O, D = self.net, self.O, self.D
+        H = self.t_horizon
+        seen = {(O, self.t0)}
+        queue = [(O, self.t0)]
+        self.time_nodes.add((O, self.t0))
+        while queue:
+            i, t = queue.pop()
+            if i == D:
+                continue                              # (6) destination absorbs
+            # travel arcs
+            for j in net.G.successors(i):
+                if j == O:
+                    continue                          # (5) nothing enters O
+                c = net.travel_time(i, j, t)
+                tp = t + c
+                if tp > H:
+                    continue
+                self.arcs[(i, j, t)] = (c, net.preference(i, j, t))
+                self.departures.setdefault((i, t), []).append((i, j, t))
+                self.arrivals.setdefault((j, tp), []).append((i, j, t))
+                self.time_nodes.add((j, tp))
+                if j != D and (j, tp) not in seen:
+                    seen.add((j, tp))
+                    queue.append((j, tp))
+            # wait arc (i, t) -> (i, t+1), for intermediate nodes only
+            if i != O and t + 1 <= H:
+                self.waits.add((i, t))
+                self.time_nodes.add((i, t + 1))
+                if (i, t + 1) not in seen:
+                    seen.add((i, t + 1))
+                    queue.append((i, t + 1))
 
     # ---- bookkeeping helpers -------------------------------------------- #
     def in_arcs(self, node):

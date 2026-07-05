@@ -121,6 +121,9 @@ def build_animation(net, segments, samples, cfg_sim):
     ax_net.margins(0.03)
     ax_net.set_title(f"Agent on network {cfg_sim.get('_num', '')}   "
                      f"route {'-'.join(map(str, route))}", fontsize=11)
+    wait_banner = ax_net.text(0.5, 0.98, "", transform=ax_net.transAxes,
+                              ha="center", va="top", fontsize=13,
+                              color="red", fontweight="bold", zorder=9)
 
     day_ticks = [net.t_start] + [b for _a, b in net.horizons]
 
@@ -204,8 +207,12 @@ def build_animation(net, segments, samples, cfg_sim):
         state["velbar"].set_xdata([tc, tc])
         state["profbar"].set_xdata([tc, tc])
 
+        waiting = samples["waiting"][f]
         ax, ay = samples["x"][f], samples["y"][f]
+        # while WAITING the agent sits at node i (bigger red dot); else moves
         agent_pt.set_data([ax], [ay])
+        agent_pt.set_color("red" if waiting else "royalblue")
+        agent_pt.set_markersize(16 if waiting else 13)
         tx = [pos[route[k]][0] for k in range(s + 1)] + [ax]
         ty = [pos[route[k]][1] for k in range(s + 1)] + [ay]
         travel_ln.set_data(tx, ty)
@@ -213,6 +220,7 @@ def build_animation(net, segments, samples, cfg_sim):
         spd_ln.set_data(samples["clock"][:f + 1], samples["speed"][:f + 1])
         cum_ln.set_data(samples["clock"][:f + 1], samples["cumpref"][:f + 1])
 
+        wait_banner.set_text(f"WAITING at node {seg['i']}" if waiting else "")
         txt.set_text(f"elapsed: {samples['elapsed'][f]:6.1f} min      "
                      f"total preference: {samples['cumpref'][f]:6.2f}"
                      f"   ({_hms(tc)})")
@@ -243,7 +251,24 @@ def main():
     t0 = net.t_start if t0 is None else int(t0)
 
     O, D = net.G.graph.get("origin"), net.G.graph.get("destination")
+
+    # -- solution source: a saved EECM solution (with waiting) > explicit route --
     route = sim.get("route")
+    dep_times = sim.get("dep_times")
+    sol_json = sim.get("solution_json")
+    if sol_json:                        # load route + dep_times from a saved sol
+        import json
+        rows = json.load(open(sol_json, encoding="utf-8"))
+        sid = sim.get("solution_id")
+        row = next((r for r in rows if r["sol"] == sid), rows[0] if rows else None)
+        if row is None:
+            raise SystemExit(f"no solution '{sid}' in {sol_json}")
+        route = row["route"]
+        dep_times = row.get("dep_times")
+        t0 = int(dep_times[0]) if dep_times else t0
+        print(f"loaded {row['sol']} from {sol_json}: f1={row['f1']} f2={row['f2']}"
+              f"{'  (with waiting)' if dep_times else ''}")
+
     if not route:                       # auto: shortest travel-time path O->D
         route = nx.shortest_path(net.G, O, D,
                                  weight=lambda i, j, d: net.travel_time(i, j, t0))
@@ -252,7 +277,7 @@ def main():
         print(f"note: route starts at {route[0]} ends at {route[-1]} "
               f"(network O={O}, D={D})")
 
-    segments = build_journey(net, route, t0)
+    segments = build_journey(net, route, t0, dep_times=dep_times)
     samples = sample_journey(net, segments, sim.get("frame_minutes", 0.5))
     fig, anim, n = build_animation(net, segments, samples, sim)
 

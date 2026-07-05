@@ -15,10 +15,14 @@ from .solve import solve_single
 
 
 def epsilon_constraint(net, O, D, t0=None, *, delta=1, time_limit=None,
-                       max_iter=1000, verbose=False):
+                       max_iter=1000, waiting=False, budget=None, verbose=False):
     """Trace the exact Pareto front of model P. Returns a list of non-dominated
-    Solutions sorted by travel time (empty if D is unreachable from O)."""
-    te = TimeExpanded(net, O, D, t0=t0)
+    Solutions sorted by travel time (empty if D is unreachable from O).
+
+    waiting=True allows waiting at nodes (constraint 9'); then f2 is the total
+    elapsed time arrival(D) - t0, which INCLUDES waiting. budget overrides the
+    time-expansion horizon (t0 + budget); None = auto."""
+    te = TimeExpanded(net, O, D, t0=t0, waiting=waiting, budget=budget)
     if not te.reachable_destination:
         if verbose:
             print("destination unreachable from origin")
