@@ -69,7 +69,7 @@ nsga2:
   seed: 1
 
 # ---------------------------------------------------------------------
-# Exact epsilon-constraint method (small instances only)
+# Exact epsilon-constraint method   (small instances only)
 # ---------------------------------------------------------------------
 exact:
   solver: cplex             # MILP solver: cbc (bundled) | cplex
