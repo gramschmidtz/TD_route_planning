@@ -1,6 +1,10 @@
 """
-Exact epsilon-constraint method (Section IV.B) -- endpoints AND the P2(eps_k)
-Pareto iteration, drawn live on one figure.
+Plot the exact Pareto front on a dataset network via the epsilon-constraint
+method (Section IV.B) -- endpoints AND the P2(eps_k) iteration, drawn live.
+
+Waiting is controlled by config `exact.waiting`:
+  * false -> no waiting (leave each node on arrival); f2 = total travel time.
+  * true  -> waiting allowed; f2 = arrival(D) - t0 (includes waiting time).
 
 On the selected dataset network (config `network_number`), for its origin O,
 destination D and departure time t0, this first solves the four corner problems
@@ -22,8 +26,8 @@ Responsiveness: the ILP solves run in a background thread while a canvas timer
 on the main thread drains results and updates the plot, so the window never
 freezes during a long solve.
 
-    python -m examples.eecm_endpoints
-    python -m examples.eecm_endpoints --config my.yaml
+    python -m examples.plot_pareto_front
+    python -m examples.plot_pareto_front --config my.yaml
 """
 from __future__ import annotations
 
@@ -97,7 +101,7 @@ class SolutionLog:
 # -------------------------------------------------------------------------- #
 # Figure
 # -------------------------------------------------------------------------- #
-def build_base_figure(ep, num, O, D, t0):
+def build_base_figure(ep, num, O, D, t0, waiting=False):
     """Endpoint figure: the two extreme Pareto points only."""
     fig, ax = plt.subplots(figsize=(9, 7))
     ax.scatter([ep.f1_N], [ep.f2_I], s=170, marker="o", facecolor="none",
@@ -106,9 +110,11 @@ def build_base_figure(ep, num, O, D, t0):
     ax.scatter([ep.f1_I], [ep.f2_N], s=170, marker="s", facecolor="none",
                edgecolor="tab:red", linewidths=1.8, zorder=4,
                label="(f1$^I$, f2$^N$)  max-preference end")
+    mode = "waiting allowed" if waiting else "no waiting"
     ax.set_xlabel("$f_1$  total preference score  →  maximise")
     ax.set_ylabel("$f_2$  total travel time  (min)  →  minimise")
-    ax.set_title(f"EECM   net {num}   O={O} D={D}  depart {_hms(t0)}")
+    ax.set_title(f"Exact Pareto front ({mode})   net {num}   "
+                 f"O={O} D={D}  depart {_hms(t0)}")
     ax.grid(alpha=0.3)
     ax.legend(loc="upper left", fontsize=9)
     return fig, ax
@@ -174,8 +180,9 @@ def main():
     print(f"FIRST EPSILON eps_1 = f1^N + delta = {ep.f1_N:.0f} + {delta} "
           f"= {ep.first_eps:.0f}\n")
 
-    fig, ax = build_base_figure(ep, num, O, D, t0)
-    log = SolutionLog(f"eecm_net{num}_depart{_hhmm(t0)}_solutions.json")
+    fig, ax = build_base_figure(ep, num, O, D, t0, waiting=waiting)
+    tag = "wait" if waiting else "nowait"
+    log = SolutionLog(f"pareto_net{num}_depart{_hhmm(t0)}_{tag}.json")
     artists = {}                                    # sol_id -> (scatter, text)
 
     print(f"{'sol':>6} {'eps':>6} {'f1':>6} {'f2':>6} {'time(s)':>9}")

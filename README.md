@@ -32,7 +32,7 @@ python -m examples.plot_edge        # plot one arc's c_ijt & u_ijt over the day
 python -m examples.build_dataset    # build the fixed 120-network benchmark
 python -m examples.simulate_agent   # animate an agent along a route (window)
 python -m examples.plot_route_plane # place a route as a point in the (f1,f2) plane
-python -m examples.eecm_endpoints   # exact ε-constraint: endpoints + P2(ε) front, saved to json/csv
+python -m examples.plot_pareto_front # exact ε-constraint Pareto front (config exact.waiting)
 python -m td_route.demo             # network sanity check + plot
 
 python -m examples.run_planner --config experiments/big.yaml   # alternative file

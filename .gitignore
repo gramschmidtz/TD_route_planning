@@ -59,6 +59,7 @@ desktop.ini
 /*.gif
 /*.mp4
 /eecm_net*.json
+/pareto_net*.json
 
 # ---------------------------------------------------------------------------
 # Fixed 120-network benchmark
