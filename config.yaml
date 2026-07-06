@@ -137,6 +137,6 @@ simulation:
   solution_json: eecm_net001_depart0700_pf1I.json       # load route + dep_times from an EECM solutions JSON, e.g.
                             #   eecm_net001_depart0700_solutions.json (overrides route/dep_times)
   solution_id: f1I         # which solution in that file, e.g. "sol3" (null = first)
-  out: simulation.gif       # used only if you uncomment the save line in the script
+  out: simulation.mp4       # used only if you uncomment the save line in the script
   fps: 20
   frame_minutes: 0.5        # simulated minutes advanced per animation frame

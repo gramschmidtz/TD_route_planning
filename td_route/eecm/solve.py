@@ -126,13 +126,19 @@ def extract_solution(te: TimeExpanded, x) -> Solution:
 
 
 # -------------------------------------------------------------------------- #
-# Waiting model with EXPLICIT wait variables w_it (wait at node i, t -> t+1).
-# Follows the wait-variable formulation:
+# Waiting model with explicit wait variables w_it and TIME-NODE FLOW
+# CONSERVATION (the tight, network-flow formulation):
 #     max  sum u_ijt x_ijt
-#     min  sum c_ijt x_ijt + sum w_it            (travel time + waiting time)
-#     x_ijt <= sum_k x_jk(t+c_ijt) + w_j(t+c_ijt)   (arrive j -> leave or wait)
-#     w_it  <= sum_j x_ij(t+1)     + w_i(t+1)        (wait -> leave next or wait)
-# plus (3),(4) endpoints, (5),(6) structural, (7) node-level flow, (8) node-once.
+#     min  sum c_ijt x_ijt + sum w_it                 (travel + waiting time)
+#     flow balance at every (v, tau), v in V\{1,n}:
+#         sum_{(i,t): t+c_ivt=tau} x_ivt + w_{v,tau-1}
+#             == sum_{k} x_{v,k,tau} + w_{v,tau}
+#     plus (3),(4) endpoints, (5),(6) structural, (8) node-once.
+# The equality balance IMPLIES the arrive->leave/wait and wait->leave/wait
+# coupling inequalities (so they are dropped) and additionally forbids
+# "floating" wait variables, giving a totally-unimodular network-flow LP
+# relaxation -> tight, fast under branch-and-cut. Under the balance,
+# f2 = sum c x + sum w equals the true elapsed time arrival(D) - t0.
 # -------------------------------------------------------------------------- #
 def _solve_waiting(te, sense, *, eps, fix_f1, fix_f2, time_limit, msg):
     prob = pulp.LpProblem("Pk_wait", pulp.LpMinimize)
@@ -141,47 +147,38 @@ def _solve_waiting(te, sense, *, eps, fix_f1, fix_f2, time_limit, msg):
     w = {a: pulp.LpVariable(f"w_{a[0]}_{a[1]}", cat="Binary") for a in te.waits}
 
     O, D, t0 = te.O, te.D, te.t0
-    into, outof = {}, {}                          # travel arcs by head / tail node
-    for a in te.arcs:
-        into.setdefault(a[1], []).append(a)
-        outof.setdefault(a[0], []).append(a)
 
     f1 = pulp.lpSum(te.arcs[a][1] * x[a] for a in te.arcs)
-    # f2 = total travel time + total waiting time
-    f2 = (pulp.lpSum(te.arcs[a][0] * x[a] for a in te.arcs)
-          + pulp.lpSum(w[a] for a in te.waits))
-
+    f2 = (pulp.lpSum(te.arcs[a][0] * x[a] for a in te.arcs)      # travel time
+          + pulp.lpSum(w[a] for a in te.waits))                  # + waiting time
     prob += (f2 if sense == "min_f2" else -f1)
 
     # (3) exactly one arc leaves O at t0
     prob += pulp.lpSum(x[a] for a in te.departures.get((O, t0), [])) == 1, "out_O"
     # (4) exactly one arc enters D
-    prob += pulp.lpSum(x[a] for a in into.get(D, [])) == 1, "in_D"
+    into_D = [a for a in te.arcs if a[1] == D]
+    prob += pulp.lpSum(x[a] for a in into_D) == 1, "in_D"
 
-    # (7) node-level flow conservation; (8) each node entered at most once
-    for v in set(into) | set(outof):
-        if v not in (O, D):
-            prob += (pulp.lpSum(x[a] for a in into.get(v, [])) ==
-                     pulp.lpSum(x[a] for a in outof.get(v, []))), f"flow_{v}"
-        if v != O and into.get(v):
-            prob += pulp.lpSum(x[a] for a in into[v]) <= 1, f"once_{v}"
-
-    # arrive-j -> leave-or-wait:  x_ijt <= sum_k x_jk(t+c) + w_j(t+c)
-    for (i, j, t), (c, _u) in te.arcs.items():
-        if j == D:
+    # time-node flow conservation:  inflow(v,tau) == outflow(v,tau)
+    #   inflow  = travel arcs arriving at (v,tau) + wait-in  w_{v,tau-1}
+    #   outflow = travel arcs leaving  (v,tau)    + wait-out w_{v,tau}
+    for (v, tau) in te.time_nodes:
+        if v == O or v == D:
             continue
-        tp = t + c
-        rhs = [x[s] for s in te.departures.get((j, tp), [])]
-        if (j, tp) in te.waits:
-            rhs.append(w[(j, tp)])
-        prob += x[(i, j, t)] <= pulp.lpSum(rhs), f"cont_{i}_{j}_{t}"
+        inflow = [x[a] for a in te.arrivals.get((v, tau), [])]
+        if (v, tau - 1) in te.waits:
+            inflow.append(w[(v, tau - 1)])
+        outflow = [x[a] for a in te.departures.get((v, tau), [])]
+        if (v, tau) in te.waits:
+            outflow.append(w[(v, tau)])
+        if inflow or outflow:
+            prob += pulp.lpSum(inflow) == pulp.lpSum(outflow), f"bal_{v}_{tau}"
 
-    # wait -> leave-next-or-wait:  w_it <= sum_j x_ij(t+1) + w_i(t+1)
-    for (i, t) in te.waits:
-        rhs = [x[s] for s in te.departures.get((i, t + 1), [])]
-        if (i, t + 1) in te.waits:
-            rhs.append(w[(i, t + 1)])
-        prob += w[(i, t)] <= pulp.lpSum(rhs), f"wcont_{i}_{t}"
+    # (8) each node entered at most once (via a travel arc; waiting excluded)
+    for v in {a[1] for a in te.arcs}:
+        if v == O:
+            continue
+        prob += pulp.lpSum(x[a] for a in te.arcs if a[1] == v) <= 1, f"once_{v}"
 
     if eps is not None:
         prob += f1 >= eps, "eps_cut"

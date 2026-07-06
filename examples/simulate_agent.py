@@ -242,6 +242,13 @@ def main():
     sim = dict(cfg.get("simulation", {}))
     sim["_num"] = num
 
+    # If we are saving to a file, render off-screen (Agg) -- reliable and avoids
+    # the "save after the interactive window was closed" Tk teardown crash.
+    # Leave simulation.out empty/null to instead open an interactive window.
+    out = sim.get("out")
+    if out:
+        plt.switch_backend("Agg")
+
     # optional agent base-speed override (dataset stores its own value)
     ffs = sim.get("free_flow_speed")
     if ffs is not None:
@@ -286,14 +293,66 @@ def main():
           f"travel {segments[-1]['t_arr'] - t0:.1f} min  "
           f"total preference {samples['cumpref'][-1]:.2f}  base_speed={net.free_flow_speed}")
 
-    # Show the animation in an interactive window first.
-    plt.show()
+    if out:
+        # Save to the file named by config simulation.out (extension picks the
+        # writer: .mp4/.mov -> ffmpeg, else GIF; falls back to GIF if ffmpeg is
+        # missing). Rendered off-screen, so it does not open a window.
+        _save_anim(anim, out, sim.get("fps", 20))
+    else:
+        # No output file set: show the animation in an interactive window.
+        plt.show()
 
-    # --- To SAVE instead of (or after) showing, comment out plt.show() above
-    #     and uncomment ONE of the following (needs the matching writer):
-    from matplotlib.animation import PillowWriter
-    anim.save(sim.get("out", "simulation.gif"), writer=PillowWriter(fps=sim.get("fps", 20)))
-    # anim.save("simulation.mp4", writer="ffmpeg", fps=sim.get("fps", 20), dpi=120)
+
+def _progress_bar():
+    """Return a progress_callback(i, n) that draws an in-place frame-render bar
+    with elapsed time and ETA."""
+    import sys
+    import time
+    start = [None]
+
+    def cb(i, n):
+        if start[0] is None:
+            start[0] = time.time()
+        el = time.time() - start[0]
+        frac = (i + 1) / n
+        eta = (el / frac - el) if frac > 0 else 0.0
+        fill = int(30 * frac)
+        bar = "#" * fill + "-" * (30 - fill)
+        sys.stdout.write(f"\r  rendering [{bar}] {i + 1}/{n} {frac * 100:5.1f}%"
+                         f"  elapsed {el:5.1f}s  eta {eta:5.1f}s")
+        sys.stdout.flush()
+        if i + 1 == n:
+            sys.stdout.write("\n")
+    return cb
+
+
+def _save_anim(anim, out, fps):
+    from matplotlib.animation import FFMpegFileWriter, PillowWriter
+    ext = out.rsplit(".", 1)[-1].lower()
+    prog = _progress_bar()
+    if ext in ("mp4", "mov", "m4v"):
+        # Some conda/system ffmpeg builds crash on Windows (Errno 22 /
+        # STATUS_STACK_BUFFER_OVERRUN 0xC0000409). Prefer the known-good static
+        # ffmpeg bundled by imageio-ffmpeg (pip install imageio-ffmpeg).
+        try:
+            import imageio_ffmpeg
+            import matplotlib
+            matplotlib.rcParams["animation.ffmpeg_path"] = \
+                imageio_ffmpeg.get_ffmpeg_exe()
+        except Exception:
+            print("(tip: pip install imageio-ffmpeg for a reliable ffmpeg binary)")
+        # FFMpegFileWriter writes temp PNG frames, then ffmpeg encodes them
+        # (image2 demuxer) -- avoids the fragile raw-frame stdin pipe. The -vf
+        # scale filter rounds the frame to EVEN width/height (h264/yuv420p needs
+        # it; float dpi sizes can be odd). yuv420p plays in common players.
+        writer = FFMpegFileWriter(fps=fps, extra_args=[
+            "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-pix_fmt", "yuv420p"])
+        anim.save(out, writer=writer, dpi=100,
+                  savefig_kwargs={"facecolor": "white"},
+                  progress_callback=prog)
+    else:
+        anim.save(out, writer=PillowWriter(fps=fps), progress_callback=prog)
+    print(f"saved animation -> {out}")
 
 
 if __name__ == "__main__":
