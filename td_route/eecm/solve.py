@@ -10,10 +10,35 @@ Objective convention:  f1 = preference (max),  f2 = travel time (min).
 """
 from __future__ import annotations
 
+import os
+
 import pulp
 
 from ..decision import Solution
 from .time_expanded import TimeExpanded
+
+
+# --------------------------------------------------------------------------- #
+# Solver selection (CBC by default; CPLEX via config exact.solver/cplex_path)
+# --------------------------------------------------------------------------- #
+_SOLVER_CFG = {"solver": "cbc", "cplex_path": None}
+
+
+def configure_solver(exact_cfg=None):
+    """Set the MILP solver from a config `exact` dict: solver = 'cbc' | 'cplex',
+    cplex_path = path to cplex.exe (or its folder). Call once at start-up."""
+    exact_cfg = exact_cfg or {}
+    _SOLVER_CFG["solver"] = str(exact_cfg.get("solver") or "cbc").lower()
+    _SOLVER_CFG["cplex_path"] = exact_cfg.get("cplex_path")
+
+
+def _build_solver(time_limit, msg):
+    if _SOLVER_CFG["solver"] == "cplex":
+        path = _SOLVER_CFG["cplex_path"]
+        if path and os.path.isdir(path):          # folder given -> append exe
+            path = os.path.join(path, "cplex.exe")
+        return pulp.CPLEX_CMD(path=path, msg=msg, timeLimit=time_limit)
+    return pulp.PULP_CBC_CMD(msg=msg, timeLimit=time_limit)
 
 
 def solve_single(te: TimeExpanded, sense, *, eps=None, fix_f1=None, fix_f2=None,
@@ -76,7 +101,7 @@ def solve_single(te: TimeExpanded, sense, *, eps=None, fix_f1=None, fix_f2=None,
     if fix_f2 is not None:
         prob += f2 == fix_f2, "fix_f2"
 
-    prob.solve(pulp.PULP_CBC_CMD(msg=msg, timeLimit=time_limit))
+    prob.solve(_build_solver(time_limit, msg))
     if pulp.LpStatus[prob.status] != "Optimal":
         return None
     return extract_solution(te, x)
@@ -101,9 +126,13 @@ def extract_solution(te: TimeExpanded, x) -> Solution:
 
 
 # -------------------------------------------------------------------------- #
-# Waiting model: time-expanded graph with wait arcs (equivalent to the
-# summation constraint (9') but sparse). f2 = arrival(D) - t0, i.e. total
-# elapsed time INCLUDING waiting.
+# Waiting model with EXPLICIT wait variables w_it (wait at node i, t -> t+1).
+# Follows the wait-variable formulation:
+#     max  sum u_ijt x_ijt
+#     min  sum c_ijt x_ijt + sum w_it            (travel time + waiting time)
+#     x_ijt <= sum_k x_jk(t+c_ijt) + w_j(t+c_ijt)   (arrive j -> leave or wait)
+#     w_it  <= sum_j x_ij(t+1)     + w_i(t+1)        (wait -> leave next or wait)
+# plus (3),(4) endpoints, (5),(6) structural, (7) node-level flow, (8) node-once.
 # -------------------------------------------------------------------------- #
 def _solve_waiting(te, sense, *, eps, fix_f1, fix_f2, time_limit, msg):
     prob = pulp.LpProblem("Pk_wait", pulp.LpMinimize)
@@ -112,37 +141,47 @@ def _solve_waiting(te, sense, *, eps, fix_f1, fix_f2, time_limit, msg):
     w = {a: pulp.LpVariable(f"w_{a[0]}_{a[1]}", cat="Binary") for a in te.waits}
 
     O, D, t0 = te.O, te.D, te.t0
+    into, outof = {}, {}                          # travel arcs by head / tail node
+    for a in te.arcs:
+        into.setdefault(a[1], []).append(a)
+        outof.setdefault(a[0], []).append(a)
+
     f1 = pulp.lpSum(te.arcs[a][1] * x[a] for a in te.arcs)
-    into_D = [a for a in te.arcs if a[1] == D]           # arcs (i, D, t)
-    # arrival at D = t + c for the single selected arc into D; f2 = arrival - t0
-    f2 = pulp.lpSum((a[2] + te.arcs[a][0]) * x[a] for a in into_D) - t0
+    # f2 = total travel time + total waiting time
+    f2 = (pulp.lpSum(te.arcs[a][0] * x[a] for a in te.arcs)
+          + pulp.lpSum(w[a] for a in te.waits))
 
     prob += (f2 if sense == "min_f2" else -f1)
 
     # (3) exactly one arc leaves O at t0
     prob += pulp.lpSum(x[a] for a in te.departures.get((O, t0), [])) == 1, "out_O"
     # (4) exactly one arc enters D
-    prob += pulp.lpSum(x[a] for a in into_D) == 1, "in_D"
+    prob += pulp.lpSum(x[a] for a in into.get(D, [])) == 1, "in_D"
 
-    # time-node flow balance for every reachable (v, tau), v not in {O, D}
-    for (v, tau) in te.time_nodes:
-        if v == O or v == D:
-            continue
-        inflow = [x[a] for a in te.arrivals.get((v, tau), [])]
-        if (v, tau - 1) in te.waits:
-            inflow.append(w[(v, tau - 1)])
-        outflow = [x[a] for a in te.departures.get((v, tau), [])]
-        if (v, tau) in te.waits:
-            outflow.append(w[(v, tau)])
-        if inflow or outflow:
-            prob += pulp.lpSum(inflow) == pulp.lpSum(outflow), f"bal_{v}_{tau}"
+    # (7) node-level flow conservation; (8) each node entered at most once
+    for v in set(into) | set(outof):
+        if v not in (O, D):
+            prob += (pulp.lpSum(x[a] for a in into.get(v, [])) ==
+                     pulp.lpSum(x[a] for a in outof.get(v, []))), f"flow_{v}"
+        if v != O and into.get(v):
+            prob += pulp.lpSum(x[a] for a in into[v]) <= 1, f"once_{v}"
 
-    # (8) each node entered at most once (via a travel arc; waiting excluded)
-    heads = {a[1] for a in te.arcs}
-    for v in heads:
-        if v == O:
+    # arrive-j -> leave-or-wait:  x_ijt <= sum_k x_jk(t+c) + w_j(t+c)
+    for (i, j, t), (c, _u) in te.arcs.items():
+        if j == D:
             continue
-        prob += pulp.lpSum(x[a] for a in te.arcs if a[1] == v) <= 1, f"once_{v}"
+        tp = t + c
+        rhs = [x[s] for s in te.departures.get((j, tp), [])]
+        if (j, tp) in te.waits:
+            rhs.append(w[(j, tp)])
+        prob += x[(i, j, t)] <= pulp.lpSum(rhs), f"cont_{i}_{j}_{t}"
+
+    # wait -> leave-next-or-wait:  w_it <= sum_j x_ij(t+1) + w_i(t+1)
+    for (i, t) in te.waits:
+        rhs = [x[s] for s in te.departures.get((i, t + 1), [])]
+        if (i, t + 1) in te.waits:
+            rhs.append(w[(i, t + 1)])
+        prob += w[(i, t)] <= pulp.lpSum(rhs), f"wcont_{i}_{t}"
 
     if eps is not None:
         prob += f1 >= eps, "eps_cut"
@@ -151,7 +190,7 @@ def _solve_waiting(te, sense, *, eps, fix_f1, fix_f2, time_limit, msg):
     if fix_f2 is not None:
         prob += f2 == fix_f2, "fix_f2"
 
-    prob.solve(pulp.PULP_CBC_CMD(msg=msg, timeLimit=time_limit))
+    prob.solve(_build_solver(time_limit, msg))
     if pulp.LpStatus[prob.status] != "Optimal":
         return None
     return _extract_waiting(te, x, w)

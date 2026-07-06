@@ -44,6 +44,8 @@ def main():
     t0 = build_t0(cfg, net)
     run_c = cfg.get("run", {})
     ex_c = cfg.get("exact", {})
+    from td_route.eecm.solve import configure_solver
+    configure_solver(ex_c)
     solver = run_c.get("solver", "nsga2")
 
     print(f"network |V|={net.n_nodes} |A|={net.n_arcs} "

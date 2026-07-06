@@ -21,7 +21,7 @@ import time
 
 from td_route.config import load_config, load_dataset_network, build_t0
 from td_route.eecm import TimeExpanded
-from td_route.eecm.solve import solve_single
+from td_route.eecm.solve import solve_single, configure_solver
 
 
 def _hms(t):
@@ -43,6 +43,7 @@ def main():
     D = net.G.graph.get("destination")
     t0 = build_t0(cfg, net)
     ex = cfg.get("exact", {})
+    configure_solver(ex)
     waiting = ex.get("waiting", False)
 
     print(f"network {num}  O={O}  D={D}  depart {_hms(t0)}"

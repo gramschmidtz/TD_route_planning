@@ -72,8 +72,11 @@ nsga2:
 # Exact epsilon-constraint method (small instances only)
 # ---------------------------------------------------------------------
 exact:
+  solver: cplex             # MILP solver: cbc (bundled) | cplex
+  cplex_path: "C:/Program Files/IBM/ILOG/CPLEX_Studio222/cplex/bin/x64_win64/cplex.exe"
+                          #   path to cplex.exe (folder also OK); used only when solver: cplex
   delta: 1                # epsilon step (eq. 13); eps increases by delta each P2 solve
-  time_limit: null        # per-solve CBC limit in seconds; null = truly exact (slow)
+  time_limit: null        # per-solve solver limit in seconds; null = truly exact (slow)
   max_iter: 1000
   eps_start: null         # first epsilon override; null = compute f1^N + delta
   waiting: true          # allow waiting at nodes (constraint 9'); then

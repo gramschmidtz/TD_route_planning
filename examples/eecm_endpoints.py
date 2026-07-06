@@ -37,7 +37,7 @@ import matplotlib.pyplot as plt
 
 from td_route.config import load_config, load_dataset_network, build_t0
 from td_route.eecm import TimeExpanded, compute_endpoints
-from td_route.eecm.solve import solve_single
+from td_route.eecm.solve import solve_single, configure_solver
 
 
 def _hms(t):
@@ -154,6 +154,7 @@ def main():
     D = net.G.graph.get("destination")
     t0 = build_t0(cfg, net)
     ex = cfg.get("exact", {})
+    configure_solver(ex)
     delta = ex.get("delta", 1)
     tl = ex.get("time_limit")
     max_iter = ex.get("max_iter", 1000)
