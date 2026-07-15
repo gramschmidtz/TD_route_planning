@@ -41,6 +41,19 @@ def _build_solver(time_limit, msg):
     return pulp.PULP_CBC_CMD(msg=msg, timeLimit=time_limit)
 
 
+def _finish(prob, te, sol):
+    """Decide the return value after solving. Accepts a proven-optimal solution
+    OR a time-limited INCUMBENT (a feasible route reaching D that the solver
+    found but could not prove optimal). sol.meta['optimal'] records which it is.
+    Returns None only when no feasible O..D solution was found."""
+    if pulp.LpStatus[prob.status] == "Infeasible":
+        return None
+    if len(sol.route) < 2 or sol.route[-1] != te.D:
+        return None                                # no incumbent found
+    sol.meta["optimal"] = (pulp.LpStatus[prob.status] == "Optimal")
+    return sol
+
+
 def solve_single(te: TimeExpanded, sense, *, eps=None, fix_f1=None, fix_f2=None,
                  time_limit=None, msg=False):
     """Build and solve one single-objective ILP.
@@ -102,9 +115,7 @@ def solve_single(te: TimeExpanded, sense, *, eps=None, fix_f1=None, fix_f2=None,
         prob += f2 == fix_f2, "fix_f2"
 
     prob.solve(_build_solver(time_limit, msg))
-    if pulp.LpStatus[prob.status] != "Optimal":
-        return None
-    return extract_solution(te, x)
+    return _finish(prob, te, extract_solution(te, x))
 
 
 def extract_solution(te: TimeExpanded, x) -> Solution:
@@ -188,9 +199,7 @@ def _solve_waiting(te, sense, *, eps, fix_f1, fix_f2, time_limit, msg):
         prob += f2 == fix_f2, "fix_f2"
 
     prob.solve(_build_solver(time_limit, msg))
-    if pulp.LpStatus[prob.status] != "Optimal":
-        return None
-    return _extract_waiting(te, x, w)
+    return _finish(prob, te, _extract_waiting(te, x, w))
 
 
 def _extract_waiting(te, x, w) -> Solution:

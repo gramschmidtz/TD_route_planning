@@ -72,6 +72,9 @@ class SolutionLog:
             "route": list(s.route),
             "arrival": s.meta.get("arrival"),
             "solve_seconds": round(seconds, 3),
+            # False => f2 is an UPPER BOUND from a time-limited incumbent, not
+            # a certified optimum (the Pareto point may lie below it).
+            "optimal": s.meta.get("optimal", True),
         }
         # waiting solutions also carry the timed schedule, so the animation can
         # replay the waits (dep_times = departure time from each node except D)
@@ -221,8 +224,10 @@ def main():
                       f"infeasible (eps > f1^I) -> stop")
                 continue
             tag = "(endpt)" if eps is None else f"{dt:.2f}"
+            # mark time-limited incumbents (f2 not proven optimal) with a '*'
+            mark = "" if s.meta.get("optimal", True) else "  * time-limited"
             print(f"{sid:>6} {'--' if eps is None else f'{eps:.0f}':>6} "
-                  f"{s.f1:>6.0f} {s.f2:>6d} {tag:>9}")
+                  f"{s.f1:>6.0f} {s.f2:>6d} {tag:>9}{mark}")
             artists[sid] = _plot_sol(ax, sid, s)
             log.add(sid, eps, s, dt)
         fig.canvas.draw_idle()
