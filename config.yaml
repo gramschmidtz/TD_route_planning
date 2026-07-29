@@ -10,6 +10,121 @@
 # We currently work on network 001; change this number to run on another one.
 network_number: "001"
 
+# =====================================================================
+# ORBITAL transfer network (space twin of the road model).
+#   Nodes are circular orbits (altitude + RAAN, shared inclination); a point
+#   is "reached" when (altitude, RAAN) match.  travel_time = transfer ToF
+#   [days], preference = -Delta V [m/s].  Time-dependence is J2 nodal
+#   precession: different altitudes drift RAAN at different rates, so the
+#   chaser waits at its origin orbit for a RAAN-alignment window before the
+#   single Edelbaum low-thrust transfer (semi-analytic; no drag, no disposal).
+#     python -m examples.plot_transfer            # ToF & dV vs departure time
+# ---------------------------------------------------------------------
+orbital:
+  inclination_deg: 51.6      # shared orbital inclination of all nodes
+  t_start: 0                 # mission epoch (days)
+  t_end: 730                 # planning horizon (days from epoch)
+  dt_days: 0.5               # time discretisation (see note below)
+  transit_drift: true        # match RAAN at ARRIVAL (account for drift during
+                             #   the transfer); false = match at departure only
+  origin: 1                  # start orbit (node id)
+  destination: 10            # target orbit (node id)
+
+  spacecraft:                # low-thrust chaser
+    thrust_N: 0.021          # max thrust (21 mN)
+    isp_s: 2000              # specific impulse (s)
+    wet_mass_kg: 400         # initial mass
+    fuel_mass_kg: 100        # usable propellant  -> dV budget ~5642 m/s
+    ref_mass_kg: null        # reference mass for ToF; null = wet mass
+
+  # 10 circular orbits: [altitude_km, raan0_deg].  Altitudes are all DISTINCT
+  # (so every pair has a finite RAAN-realignment / "synodic" period); raan0 is
+  # staggered so different arcs' windows fall at different times.
+  orbits:
+    - [520,    0]            # 1  origin  (lowest, fastest drift ~4.70 deg/day)
+    - [610,  145]            # 2
+    - [705,   40]            # 3
+    - [800,  205]            # 4
+    - [890,   95]            # 5
+    - [980,  300]            # 6
+    - [1075, 120]            # 7
+    - [1170, 250]            # 8
+    - [1280, 175]            # 9
+    - [1400,  60]            # 10 destination (highest, slowest ~3.09 deg/day)
+
+  # Discretisation rationale (100 kg fuel, <=10 points, fixed O/D):
+  #   * dV budget ~5642 m/s; a plane change costs ~160 m/s per degree of RAAN
+  #     misalignment, so windows must be caught within ~1 deg.
+  #   * Fastest relative RAAN drift among these orbits ~1.61 deg/day, so
+  #     dt <= 1 deg / 1.61 = 0.62 day resolves any window to <1 deg -> dt=0.5 d.
+  #   * Leg ToF (~30-90 d) and waits (tens-hundreds of d) are many multiples of
+  #     dt, so rounding ToF up to a step adds <2%.  Use dt=0.25 d for tighter
+  #     window capture at 2x the time-expanded graph size.
+
+  plot:                      # examples/plot_transfer.py
+    arc: [1,10]                # [i, j] to profile; null = origin -> destination
+    horizon_days: null       # x-axis span; null = ~2 synodic periods
+    out: transfer_profile.png
+
+  viz:                       # examples/plot_orbital_network.py
+    png_3d: orbital_network_3d.png     # static 3D Earth + orbits
+    png_drift: orbital_raan_drift.png  # RAAN drift vs time (windows = crossings)
+    html_3d: orbital_network_3d.html   # interactive 3D (needs plotly)
+
+  # Exact epsilon-constraint planner on the orbital net (examples.run_orbital_planner).
+  #   - time is discretised at eecm.dt_days (1 day); ToF is rounded up to steps.
+  #   - infeasible arcs (dV > budget at that departure) are excluded automatically.
+  #   - formulation (photo):  max sum v_ijt x_ijt  /  min sum dv_ijt x_ijt,
+  #     s.t. sum dv_ijt x_ijt < 5642.4 m/s  (= Isp*ge*ln(400/300), exact 100 kg
+  #     by Tsiolkovsky; order-independent since one Isp -> mass ratios multiply).
+  eecm:
+    objective: mission_value # f1: "mission_value" (max total v_j(t_arr)) |
+                             #   "max_visits" | "min_dv"
+    f2: dv                   # 2nd objective: "dv" = min sum dv_ijt x_ijt
+                             #   (waiting burns nothing -> no w term) |
+                             #   "time" = min sum tof x + sum w (elapsed time)
+    dt_days: 1               # optimisation time step (days)
+    t_end_days: 1300         # time-expansion horizon (days); mission_value needs
+                             #   >~1200 to reach the destination's 1000-day peak
+                             #   (solve ~3-4 min at this size)
+    waiting: true            # allow waiting at a node for a RAAN window
+    origin_wait: true        # let the ORIGIN wait too (depart at any t): the
+                             #   space-mission cut sum_{i,t} x_{1it}=1. false =
+                             #   origin departs at t0 (the road paper's model)
+    enforce_budget: true     # propellant cut: sum dv x < dv_budget (f2: dv) or
+                             #   sum tof x < tof_budget_days (f2: time)
+    dv_budget: null          # m/s; null = Isp*ge*ln(m0/(m0-fuel)) = 5642.4
+    tof_budget_days: 1080    # used only when f2: time (fuel/mdot = 1081 d exact)
+    delta: null              # epsilon step; null = 0.3 (mission_value) /
+                             #   1 (max_visits) / 100 (min_dv)
+    time_limit: 120          # per-solve MILP limit (s); uses exact.solver/cplex_path
+    out: orbital_pareto.png  # Pareto-front figure
+    solutions: orbital_solutions.json   # run_orbital_planner WRITES the solved
+                             #   front here; animate_orbital_solution READS it
+                             #   (so the slow solve runs only once)
+
+  # Time-dependent mission value v_j(t) per node (examples.plot_mission_value).
+  #   Reward for ARRIVING at node j at time t.  Intermediate nodes: mixture of
+  #   2-4 Gaussian value windows; destination: single peak at dest_peak_day.
+  mission:
+    horizon_days: 1500       # value-landscape horizon
+    dest_peak_day: 1000      # destination's lone peak time (days)
+    dest_sigma: 130          # destination peak width (days)
+    peaks_range: [2, 4]      # #Gaussian peaks per intermediate node
+    seed: 42                 # RNG seed (reproducible landscape)
+    out: mission_value.png
+
+  # Replay the saved front (examples.animate_orbital_solution). Reads
+  # eecm.solutions -- run examples.run_orbital_planner first. The HTML always
+  # contains EVERY front solution (dropdown); `select` only picks the MP4 one.
+  simulation:
+    select: max_value          # "max_visits" | "max_value" | "min_time" |
+                               #   "min_dv" | <int k> (front index)
+    frames: 240              # animation frames over the whole journey
+    fps: 20                  # MP4 frame rate
+    html: orbital_solution.html   # interactive Three.js output
+    mp4: null     # MP4 output (null to skip)
+
 # ---------------------------------------------------------------------
 # Road-network structure (time-dependent travel-time / speed model, ref [11])
 # ---------------------------------------------------------------------

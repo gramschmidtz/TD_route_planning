@@ -18,15 +18,24 @@ class TimeExpanded:
     """Reachable (i, j, t) tuples with their travel time and preference."""
 
     def __init__(self, net, O, D, t0=None, max_horizon=None, budget=None,
-                 waiting=False):
+                 waiting=False, origin_wait=False):
         self.net = net
         self.O, self.D = O, D
         self.t0 = net.t_start if t0 is None else t0
         self.t_end = net.t_end if max_horizon is None else max_horizon
         self.waiting = waiting
+        # origin_wait: let the origin depart at ANY time (not fixed to t0), i.e.
+        # wait at the origin orbit for a RAAN window (space-mission formulation
+        # sum_{i,t} x_{1it} = 1).  Only meaningful with waiting=True.
+        self.origin_wait = origin_wait and waiting
 
         # arcs[(i, j, t)] = (c_ijt, u_ijt)   -- travel arcs, used by both models
         self.arcs: dict = {}
+        # costs[(i, j, t)] = an OPTIONAL second arc coefficient, filled when the
+        # net exposes arc_cost(i,j,t) (e.g. dV per transfer). When present the
+        # solvers minimise sum cost*x as f2 INSTEAD of travel time (+ waits) --
+        # the space-mission "min sum dv x" objective; waiting costs nothing.
+        self.costs: dict = {}
 
         # The time-expansion horizon is t0 + budget (a cap on elapsed time).
         #   * budget = None          -> the whole day (t_end - t0), both modes.
@@ -63,6 +72,12 @@ class TimeExpanded:
 
     def _build(self):
         net, O, D = self.net, self.O, self.D
+        # Optional per-arc feasibility hook: nets that expose arc_feasible(i,j,t)
+        # (e.g. the orbital adapter) can declare a departure-time/arc UNUSABLE --
+        # then no x_ijt is created for it (same effect as the paper fixing an
+        # unreachable variable to 0). Road nets have no such method -> no effect.
+        feas = getattr(net, "arc_feasible", None)
+        costf = getattr(net, "arc_cost", None)        # optional dv coefficient
         seen = {(O, self.t0)}
         queue = [(O, self.t0)]
         while queue:
@@ -74,12 +89,16 @@ class TimeExpanded:
                 if j == O:
                     # (5): no arc enters the origin -- never create x_{i,O,t}.
                     continue
+                if feas is not None and not feas(i, j, t):
+                    continue                     # infeasible arc at t -> unusable
                 c = net.travel_time(i, j, t)
                 tp = t + c
                 if tp > self.t_horizon:
                     continue
                 u = net.preference(i, j, t)
                 self.arcs[(i, j, t)] = (c, u)
+                if costf is not None:
+                    self.costs[(i, j, t)] = costf(i, j, t)
                 if j != D and (j, tp) not in seen:
                     seen.add((j, tp))
                     queue.append((j, tp))
@@ -89,6 +108,8 @@ class TimeExpanded:
         idle via wait arcs (v, tau) -> (v, tau+1). The origin cannot wait (it
         departs only at t0, constraint (3)); the destination absorbs the flow."""
         net, O, D = self.net, self.O, self.D
+        feas = getattr(net, "arc_feasible", None)     # see _build
+        costf = getattr(net, "arc_cost", None)        # optional dv coefficient
         H = self.t_horizon
         seen = {(O, self.t0)}
         queue = [(O, self.t0)]
@@ -101,19 +122,25 @@ class TimeExpanded:
             for j in net.G.successors(i):
                 if j == O:
                     continue                          # (5) nothing enters O
+                if feas is not None and not feas(i, j, t):
+                    continue                          # infeasible arc -> unusable
                 c = net.travel_time(i, j, t)
                 tp = t + c
                 if tp > H:
                     continue
                 self.arcs[(i, j, t)] = (c, net.preference(i, j, t))
+                if costf is not None:
+                    self.costs[(i, j, t)] = costf(i, j, t)
                 self.departures.setdefault((i, t), []).append((i, j, t))
                 self.arrivals.setdefault((j, tp), []).append((i, j, t))
                 self.time_nodes.add((j, tp))
                 if j != D and (j, tp) not in seen:
                     seen.add((j, tp))
                     queue.append((j, tp))
-            # wait arc (i, t) -> (i, t+1), for intermediate nodes only
-            if i != O and t + 1 <= H:
+            # wait arc (i, t) -> (i, t+1). Intermediate nodes always; the origin
+            # only when origin_wait is set (then it may sit on its orbit waiting
+            # for a window before its single departure).
+            if (self.origin_wait or i != O) and t + 1 <= H:
                 self.waits.add((i, t))
                 self.time_nodes.add((i, t + 1))
                 if (i, t + 1) not in seen:

@@ -55,13 +55,24 @@ def _finish(prob, te, sol):
 
 
 def solve_single(te: TimeExpanded, sense, *, eps=None, fix_f1=None, fix_f2=None,
-                 time_limit=None, msg=False):
+                 arc_cap=None, tof_cap=None, cost_cap=None, time_limit=None,
+                 msg=False):
     """Build and solve one single-objective ILP.
 
     sense    : "min_f2" or "max_f1" -- which objective to optimise.
     eps      : if given, add  sum u*x >= eps   (the P2 epsilon-cut, eq. 12).
     fix_f1   : if given, add  sum u*x == fix_f1.
     fix_f2   : if given, add  sum c*x == fix_f2.
+    arc_cap  : if given, add  sum_{i,j,t} x_ijt <= arc_cap   (a cap on the number
+        of maneuvers).
+    tof_cap  : if given, add  sum_{i,j,t} c_ijt x_ijt <= tof_cap   (a cap on the
+        total FLIGHT time = burn time, excluding waiting).
+    cost_cap : if given (needs te.costs, i.e. net.arc_cost), add
+        sum cost_ijt x_ijt <= cost_cap -- the space-mission propellant budget
+        sum dv_ijt x_ijt < 5642.4 m/s when arc_cost = dV.
+
+    f2 is  sum cost*x  when te.costs is populated (net.arc_cost given, e.g.
+    dV -- waiting is then free), else travel time (+ waits in the waiting model).
 
     Returns a Solution (route + f1 + f2) or None if infeasible.
     """
@@ -69,14 +80,18 @@ def solve_single(te: TimeExpanded, sense, *, eps=None, fix_f1=None, fix_f2=None,
         return None
     if getattr(te, "waiting", False):
         return _solve_waiting(te, sense, eps=eps, fix_f1=fix_f1, fix_f2=fix_f2,
-                              time_limit=time_limit, msg=msg)
+                              arc_cap=arc_cap, tof_cap=tof_cap,
+                              cost_cap=cost_cap, time_limit=time_limit, msg=msg)
 
     prob = pulp.LpProblem("Pk", pulp.LpMinimize)
     x = {k: pulp.LpVariable(f"x_{k[0]}_{k[1]}_{k[2]}", cat="Binary")
          for k in te.arcs}
 
     f1 = pulp.lpSum(te.arcs[k][1] * x[k] for k in te.arcs)   # preference
-    f2 = pulp.lpSum(te.arcs[k][0] * x[k] for k in te.arcs)   # travel time
+    if te.costs:                                             # f2 = sum cost*x (dv)
+        f2 = pulp.lpSum(te.costs[k] * x[k] for k in te.arcs)
+    else:                                                    # f2 = travel time
+        f2 = pulp.lpSum(te.arcs[k][0] * x[k] for k in te.arcs)
 
     prob += (f2 if sense == "min_f2" else -f1)               # objective
 
@@ -113,6 +128,14 @@ def solve_single(te: TimeExpanded, sense, *, eps=None, fix_f1=None, fix_f2=None,
         prob += f1 == fix_f1, "fix_f1"
     if fix_f2 is not None:
         prob += f2 == fix_f2, "fix_f2"
+    if arc_cap is not None:                        # sum x_ijt <= arc_cap
+        prob += pulp.lpSum(x[k] for k in te.arcs) <= arc_cap, "arc_cap"
+    if tof_cap is not None:                        # sum c_ijt x_ijt <= tof_cap
+        prob += pulp.lpSum(te.arcs[k][0] * x[k] for k in te.arcs) <= tof_cap, \
+            "tof_cap"
+    if cost_cap is not None and te.costs:          # sum cost_ijt x_ijt <= cost_cap
+        prob += pulp.lpSum(te.costs[k] * x[k] for k in te.arcs) <= cost_cap, \
+            "cost_cap"
 
     prob.solve(_build_solver(time_limit, msg))
     return _finish(prob, te, extract_solution(te, x))
@@ -122,18 +145,19 @@ def extract_solution(te: TimeExpanded, x) -> Solution:
     """Rebuild the route and objective values from a solved model."""
     chosen = {k for k in te.arcs if x[k].value() and x[k].value() > 0.5}
     nxt = {i: (i, j, t) for (i, j, t) in chosen}
-    route, f1, f2 = [te.O], 0.0, 0
+    route, f1, f2 = [te.O], 0.0, 0.0
     cur = te.O
     while cur in nxt and cur != te.D:
         i, j, t = nxt[cur]
         c, u = te.arcs[(i, j, t)]
         f1 += u
-        f2 += c
+        f2 += te.costs[(i, j, t)] if te.costs else c
         route.append(j)
         cur = j
         if len(route) > len(te.nodes) + 1:        # safety against cycles
             break
-    return Solution(route=route, f1=float(f1), f2=int(f2), meta={"t0": te.t0})
+    f2 = float(round(f2, 6)) if te.costs else int(f2)
+    return Solution(route=route, f1=float(f1), f2=f2, meta={"t0": te.t0})
 
 
 # -------------------------------------------------------------------------- #
@@ -151,7 +175,8 @@ def extract_solution(te: TimeExpanded, x) -> Solution:
 # relaxation -> tight, fast under branch-and-cut. Under the balance,
 # f2 = sum c x + sum w equals the true elapsed time arrival(D) - t0.
 # -------------------------------------------------------------------------- #
-def _solve_waiting(te, sense, *, eps, fix_f1, fix_f2, time_limit, msg):
+def _solve_waiting(te, sense, *, eps, fix_f1, fix_f2, arc_cap=None,
+                   tof_cap=None, cost_cap=None, time_limit=None, msg=False):
     prob = pulp.LpProblem("Pk_wait", pulp.LpMinimize)
     x = {a: pulp.LpVariable(f"x_{a[0]}_{a[1]}_{a[2]}", cat="Binary")
          for a in te.arcs}
@@ -160,21 +185,35 @@ def _solve_waiting(te, sense, *, eps, fix_f1, fix_f2, time_limit, msg):
     O, D, t0 = te.O, te.D, te.t0
 
     f1 = pulp.lpSum(te.arcs[a][1] * x[a] for a in te.arcs)
-    f2 = (pulp.lpSum(te.arcs[a][0] * x[a] for a in te.arcs)      # travel time
-          + pulp.lpSum(w[a] for a in te.waits))                  # + waiting time
+    if te.costs:
+        # space-mission f2 = sum cost*x (e.g. dV): waiting burns no propellant,
+        # so the wait variables carry NO objective coefficient.
+        f2 = pulp.lpSum(te.costs[a] * x[a] for a in te.arcs)
+    else:
+        f2 = (pulp.lpSum(te.arcs[a][0] * x[a] for a in te.arcs)  # travel time
+              + pulp.lpSum(w[a] for a in te.waits))              # + waiting time
     prob += (f2 if sense == "min_f2" else -f1)
 
-    # (3) exactly one arc leaves O at t0
-    prob += pulp.lpSum(x[a] for a in te.departures.get((O, t0), [])) == 1, "out_O"
     # (4) exactly one arc enters D
     into_D = [a for a in te.arcs if a[1] == D]
     prob += pulp.lpSum(x[a] for a in into_D) == 1, "in_D"
 
+    origin_wait = getattr(te, "origin_wait", False)
+    if not origin_wait:
+        # (3) exactly one arc leaves O at t0 (origin departs immediately)
+        prob += pulp.lpSum(x[a] for a in te.departures.get((O, t0), [])) == 1, "out_O"
+
     # time-node flow conservation:  inflow(v,tau) == outflow(v,tau)
     #   inflow  = travel arcs arriving at (v,tau) + wait-in  w_{v,tau-1}
+    #             (+ a unit SOURCE injected at (O,t0) when origin_wait)
     #   outflow = travel arcs leaving  (v,tau)    + wait-out w_{v,tau}
+    # With origin_wait the origin joins the balance as a source of 1 at t0, so
+    # the unit may ride origin wait arcs (counted in f2) until its lone
+    # departure -- realising sum_{i,t} x_{1it} = 1 at a FREE departure time.
     for (v, tau) in te.time_nodes:
-        if v == O or v == D:
+        if v == D:
+            continue
+        if v == O and not origin_wait:
             continue
         inflow = [x[a] for a in te.arrivals.get((v, tau), [])]
         if (v, tau - 1) in te.waits:
@@ -182,8 +221,10 @@ def _solve_waiting(te, sense, *, eps, fix_f1, fix_f2, time_limit, msg):
         outflow = [x[a] for a in te.departures.get((v, tau), [])]
         if (v, tau) in te.waits:
             outflow.append(w[(v, tau)])
-        if inflow or outflow:
-            prob += pulp.lpSum(inflow) == pulp.lpSum(outflow), f"bal_{v}_{tau}"
+        src = 1 if (origin_wait and v == O and tau == t0) else 0
+        if inflow or outflow or src:
+            prob += pulp.lpSum(inflow) + src == pulp.lpSum(outflow), \
+                f"bal_{v}_{tau}"
 
     # (8) each node entered at most once (via a travel arc; waiting excluded)
     for v in {a[1] for a in te.arcs}:
@@ -197,22 +238,32 @@ def _solve_waiting(te, sense, *, eps, fix_f1, fix_f2, time_limit, msg):
         prob += f1 == fix_f1, "fix_f1"
     if fix_f2 is not None:
         prob += f2 == fix_f2, "fix_f2"
+    if arc_cap is not None:                        # sum x_ijt <= arc_cap
+        prob += pulp.lpSum(x[a] for a in te.arcs) <= arc_cap, "arc_cap"
+    if tof_cap is not None:                        # sum c_ijt x_ijt <= tof_cap
+        prob += pulp.lpSum(te.arcs[a][0] * x[a] for a in te.arcs) <= tof_cap, \
+            "tof_cap"
+    if cost_cap is not None and te.costs:          # sum cost_ijt x_ijt <= cost_cap
+        prob += pulp.lpSum(te.costs[a] * x[a] for a in te.arcs) <= cost_cap, \
+            "cost_cap"
 
     prob.solve(_build_solver(time_limit, msg))
     return _finish(prob, te, _extract_waiting(te, x, w))
 
 
 def _extract_waiting(te, x, w) -> Solution:
-    """Walk O..D through active travel/wait arcs; f2 = arrival(D) - t0.
+    """Walk O..D through active travel/wait arcs.
 
-    Records the full timed schedule in meta:
+    f2 = arrival(D) - t0 (elapsed time), or sum of arc costs (e.g. total dV)
+    when the cost mode is active (te.costs populated).  Records the full timed
+    schedule in meta:
       timeline  : [{node, arrival, departure}]  (departure=None at D)
       dep_times : departure time from each node of the route except D
     so the waiting (= departure - arrival at a node) is fully preserved and the
     journey -- including waits -- can be replayed by the simulator.
     """
     O, D, t0 = te.O, te.D, te.t0
-    route, f1 = [O], 0.0
+    route, f1, cost = [O], 0.0, 0.0
     timeline = []
     cur, tau = O, t0
     arr_here = t0                                 # arrival time at `cur`
@@ -229,6 +280,8 @@ def _extract_waiting(te, x, w) -> Solution:
             c, u = te.arcs[dep]
             timeline.append({"node": cur, "arrival": arr_here, "departure": tau})
             f1 += u
+            if te.costs:
+                cost += te.costs[dep]
             route.append(dep[1])
             arr_here = tau + c                     # arrival at the next node
             cur, tau = dep[1], tau + c
@@ -240,6 +293,8 @@ def _extract_waiting(te, x, w) -> Solution:
         break
     timeline.append({"node": D, "arrival": arr_here, "departure": None})
     dep_times = [e["departure"] for e in timeline[:-1]]
-    return Solution(route=route, f1=float(f1), f2=int(arr_here - t0),
+    f2 = float(round(cost, 6)) if te.costs else int(arr_here - t0)
+    return Solution(route=route, f1=float(f1), f2=f2,
                     meta={"t0": t0, "arrival": arr_here, "waiting": True,
+                          "elapsed": arr_here - t0,
                           "timeline": timeline, "dep_times": dep_times})

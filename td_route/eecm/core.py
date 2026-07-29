@@ -15,20 +15,25 @@ from .solve import solve_single
 
 
 def epsilon_constraint(net, O, D, t0=None, *, delta=1, time_limit=None,
-                       max_iter=1000, waiting=False, budget=None, verbose=False):
+                       max_iter=1000, waiting=False, origin_wait=False,
+                       budget=None, arc_cap=None, tof_cap=None, cost_cap=None,
+                       verbose=False):
     """Trace the exact Pareto front of model P. Returns a list of non-dominated
     Solutions sorted by travel time (empty if D is unreachable from O).
 
     waiting=True allows waiting at nodes (constraint 9'); then f2 is the total
     elapsed time arrival(D) - t0, which INCLUDES waiting. budget overrides the
-    time-expansion horizon (t0 + budget); None = auto."""
-    te = TimeExpanded(net, O, D, t0=t0, waiting=waiting, budget=budget)
+    time-expansion horizon (t0 + budget); None = auto. arc_cap (if given) adds
+    the maneuver-count cut  sum x_ijt <= arc_cap  to every solve."""
+    te = TimeExpanded(net, O, D, t0=t0, waiting=waiting,
+                      origin_wait=origin_wait, budget=budget)
     if not te.reachable_destination:
         if verbose:
             print("destination unreachable from origin")
         return []
 
-    s_minf2 = solve_single(te, "min_f2", time_limit=time_limit)
+    s_minf2 = solve_single(te, "min_f2", arc_cap=arc_cap, tof_cap=tof_cap,
+                           cost_cap=cost_cap, time_limit=time_limit)
     if s_minf2 is None:
         return []
     if verbose:
@@ -40,7 +45,8 @@ def epsilon_constraint(net, O, D, t0=None, *, delta=1, time_limit=None,
     it = 0
     while it < max_iter:
         it += 1
-        s = solve_single(te, "min_f2", eps=eps, time_limit=time_limit)
+        s = solve_single(te, "min_f2", eps=eps, arc_cap=arc_cap, tof_cap=tof_cap,
+                         cost_cap=cost_cap, time_limit=time_limit)
         if s is None:
             break                     # eps > f1^I -> Pareto front complete
         solutions.append(s)

@@ -1,0 +1,440 @@
+{
+  "meta": {
+    "objective": "mission_value",
+    "f2": "dv",
+    "dt_days": 1.0,
+    "t_end_days": 1300.0,
+    "origin": 1,
+    "destination": 10,
+    "n_solutions": 9
+  },
+  "solutions": [
+    {
+      "route": [
+        1,
+        10
+      ],
+      "f1": 3.621626909902801e-08,
+      "f2": 449.32247,
+      "elapsed_days": 239.0,
+      "value": 3.621626909902801e-08,
+      "delta_v": 449.3224703741899,
+      "visits": 2,
+      "optimal": true,
+      "timeline": [
+        {
+          "node": 1,
+          "arrival": 0,
+          "departure": 141
+        },
+        {
+          "node": 10,
+          "arrival": 239,
+          "departure": null
+        }
+      ],
+      "dep_times": [
+        141
+      ]
+    },
+    {
+      "route": [
+        1,
+        10
+      ],
+      "f1": 0.7827045382418681,
+      "f2": 450.290068,
+      "elapsed_days": 909.0,
+      "value": 0.7827045382418681,
+      "delta_v": 450.290068058358,
+      "visits": 2,
+      "optimal": true,
+      "timeline": [
+        {
+          "node": 1,
+          "arrival": 0,
+          "departure": 810
+        },
+        {
+          "node": 10,
+          "arrival": 909,
+          "departure": null
+        }
+      ],
+      "dep_times": [
+        810
+      ]
+    },
+    {
+      "route": [
+        1,
+        7,
+        10
+      ],
+      "f1": 1.8432803213676157,
+      "f2": 453.460252,
+      "elapsed_days": 862.0,
+      "value": 1.8432803213676157,
+      "delta_v": 453.4602522245316,
+      "visits": 3,
+      "optimal": true,
+      "timeline": [
+        {
+          "node": 1,
+          "arrival": 0,
+          "departure": 507
+        },
+        {
+          "node": 7,
+          "arrival": 572,
+          "departure": 826
+        },
+        {
+          "node": 10,
+          "arrival": 862,
+          "departure": null
+        }
+      ],
+      "dep_times": [
+        507,
+        826
+      ]
+    },
+    {
+      "route": [
+        1,
+        3,
+        5,
+        10
+      ],
+      "f1": 2.6565096085903486,
+      "f2": 460.71658,
+      "elapsed_days": 941.0,
+      "value": 2.6565096085903486,
+      "delta_v": 460.7165797288419,
+      "visits": 4,
+      "optimal": true,
+      "timeline": [
+        {
+          "node": 1,
+          "arrival": 0,
+          "departure": 757
+        },
+        {
+          "node": 3,
+          "arrival": 781,
+          "departure": 813
+        },
+        {
+          "node": 5,
+          "arrival": 836,
+          "departure": 885
+        },
+        {
+          "node": 10,
+          "arrival": 941,
+          "departure": null
+        }
+      ],
+      "dep_times": [
+        757,
+        813,
+        885
+      ]
+    },
+    {
+      "route": [
+        1,
+        4,
+        5,
+        3,
+        6,
+        10
+      ],
+      "f1": 3.316303953259199,
+      "f2": 662.993303,
+      "elapsed_days": 929.0,
+      "value": 3.316303953259199,
+      "delta_v": 662.9933032646087,
+      "visits": 6,
+      "optimal": true,
+      "timeline": [
+        {
+          "node": 1,
+          "arrival": 0,
+          "departure": 236
+        },
+        {
+          "node": 4,
+          "arrival": 271,
+          "departure": 624
+        },
+        {
+          "node": 5,
+          "arrival": 635,
+          "departure": 813
+        },
+        {
+          "node": 3,
+          "arrival": 835,
+          "departure": 843
+        },
+        {
+          "node": 6,
+          "arrival": 876,
+          "departure": 883
+        },
+        {
+          "node": 10,
+          "arrival": 929,
+          "departure": null
+        }
+      ],
+      "dep_times": [
+        236,
+        624,
+        813,
+        843,
+        883
+      ]
+    },
+    {
+      "route": [
+        1,
+        8,
+        4,
+        5,
+        3,
+        6,
+        10
+      ],
+      "f1": 3.643369895790058,
+      "f2": 1039.091191,
+      "elapsed_days": 929.0,
+      "value": 3.643369895790058,
+      "delta_v": 1039.0911909726756,
+      "visits": 7,
+      "optimal": true,
+      "timeline": [
+        {
+          "node": 1,
+          "arrival": 0,
+          "departure": 51
+        },
+        {
+          "node": 8,
+          "arrival": 127,
+          "departure": 455
+        },
+        {
+          "node": 4,
+          "arrival": 497,
+          "departure": 624
+        },
+        {
+          "node": 5,
+          "arrival": 635,
+          "departure": 813
+        },
+        {
+          "node": 3,
+          "arrival": 835,
+          "departure": 843
+        },
+        {
+          "node": 6,
+          "arrival": 876,
+          "departure": 883
+        },
+        {
+          "node": 10,
+          "arrival": 929,
+          "departure": null
+        }
+      ],
+      "dep_times": [
+        51,
+        455,
+        624,
+        813,
+        843,
+        883
+      ]
+    },
+    {
+      "route": [
+        1,
+        7,
+        2,
+        5,
+        3,
+        6,
+        10
+      ],
+      "f1": 3.9439322847553626,
+      "f2": 1211.665797,
+      "elapsed_days": 930.0,
+      "value": 3.9439322847553626,
+      "delta_v": 1211.665796729346,
+      "visits": 7,
+      "optimal": true,
+      "timeline": [
+        {
+          "node": 1,
+          "arrival": 0,
+          "departure": 184
+        },
+        {
+          "node": 7,
+          "arrival": 250,
+          "departure": 395
+        },
+        {
+          "node": 2,
+          "arrival": 450,
+          "departure": 687
+        },
+        {
+          "node": 5,
+          "arrival": 732,
+          "departure": 813
+        },
+        {
+          "node": 3,
+          "arrival": 835,
+          "departure": 843
+        },
+        {
+          "node": 6,
+          "arrival": 876,
+          "departure": 882
+        },
+        {
+          "node": 10,
+          "arrival": 930,
+          "departure": null
+        }
+      ],
+      "dep_times": [
+        184,
+        395,
+        687,
+        813,
+        843,
+        882
+      ]
+    },
+    {
+      "route": [
+        1,
+        7,
+        2,
+        8,
+        3,
+        10
+      ],
+      "f1": 4.46051076654496,
+      "f2": 1440.885263,
+      "elapsed_days": 1227.0,
+      "value": 4.460510766544961,
+      "delta_v": 1440.8852627598785,
+      "visits": 6,
+      "optimal": true,
+      "timeline": [
+        {
+          "node": 1,
+          "arrival": 0,
+          "departure": 507
+        },
+        {
+          "node": 7,
+          "arrival": 572,
+          "departure": 792
+        },
+        {
+          "node": 2,
+          "arrival": 847,
+          "departure": 885
+        },
+        {
+          "node": 8,
+          "arrival": 952,
+          "departure": 989
+        },
+        {
+          "node": 3,
+          "arrival": 1042,
+          "departure": 1149
+        },
+        {
+          "node": 10,
+          "arrival": 1227,
+          "departure": null
+        }
+      ],
+      "dep_times": [
+        507,
+        792,
+        885,
+        989,
+        1149
+      ]
+    },
+    {
+      "route": [
+        1,
+        7,
+        2,
+        8,
+        3,
+        10
+      ],
+      "f1": 4.764672576940929,
+      "f2": 1750.589572,
+      "elapsed_days": 1227.0,
+      "value": 4.764672576940929,
+      "delta_v": 1750.5895715156641,
+      "visits": 6,
+      "optimal": true,
+      "timeline": [
+        {
+          "node": 1,
+          "arrival": 0,
+          "departure": 507
+        },
+        {
+          "node": 7,
+          "arrival": 572,
+          "departure": 792
+        },
+        {
+          "node": 2,
+          "arrival": 847,
+          "departure": 851
+        },
+        {
+          "node": 8,
+          "arrival": 985,
+          "departure": 989
+        },
+        {
+          "node": 3,
+          "arrival": 1042,
+          "departure": 1149
+        },
+        {
+          "node": 10,
+          "arrival": 1227,
+          "departure": null
+        }
+      ],
+      "dep_times": [
+        507,
+        792,
+        851,
+        989,
+        1149
+      ]
+    }
+  ]
+}
