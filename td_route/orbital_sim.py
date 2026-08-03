@@ -3,19 +3,32 @@ Turn one solved route (with its timed schedule) into a frame-by-frame
 trajectory that both the MP4 (matplotlib) and the interactive HTML (Three.js)
 renderers consume.
 
-Given the route and its timeline (node, arrival, departure -- in days, from the
-EECM waiting solution's meta), the chaser's state is sampled over elapsed time:
+Impulsive model (propulsion="impulsive")
+---------------------------------------
+Each leg has two very different timescales:
 
-  * WAITING at a node v in [arrival, departure]: the chaser sits on orbit v; its
-    RAAN drifts with v under J2, dV does not change.
-  * FLYING leg m from i to j in [departure_i, arrival_j]: altitude interpolates
-    a_i -> a_j and the plane interpolates RAAN_i(t_dep) -> RAAN_j(t_arr) so the
-    chaser lands exactly on orbit j at arrival; dV accrues linearly with the
-    continuous burn (fraction of the leg's dV).
+  * WAITING on orbit i, from the arrival at i until the phase-matched departure
+    -- days to months.  The chaser sits ON node i (same orbit, same position).
+  * the TRANSFER itself -- a 2-impulse Hohmann, only ~50 minutes, during which
+    the chaser coasts half of the transfer ellipse (true anomaly 0->180 going
+    up, 180->360 coming down) and arrives exactly on top of target j.
 
-Every NODE orbit also precesses over the animation, so the viewer literally sees
-the chaser wait for a RAAN window before departing.  Per-leg dV/ToF-vs-departure
-curves (for the right-hand panels) are precomputed with the transit-drift model.
+Sampling both at one uniform rate is useless: at day-per-frame the 50-minute
+transfer is a single frame, and at minute-per-frame the waits take millions of
+frames.  So the frame schedule is NON-UNIFORM -- long waits get frames in
+proportion to their length, and every transfer gets a fixed budget of frames
+(`xfer_frames`) so the rendezvous is actually watchable.  Each frame carries the
+timescale it belongs to ("wait" / "xfer") so the renderers can say so.
+
+Every frame describes the chaser as an orbit + a position on it:
+    cr = [a, e, argp, raan]  (km, -, deg, deg)   and   cnu = true anomaly (deg)
+which is a circle (e=0) while waiting and the transfer ellipse while flying, so
+the renderers can draw the real conic and the real position.  Node positions are
+reconstructed by the renderers from theta0 + phase rate, so true-anomaly
+matching (chaser dot meeting the target dot) is visible.
+
+dV is applied AT the two impulses (departure and arrival), not smeared over the
+leg, which is what an impulsive burn actually does.
 """
 from __future__ import annotations
 
@@ -37,98 +50,135 @@ def _leg_curve(onet: OrbitalNetwork, i, j, t_dep, n=140):
         tr = onet.transfer(i, j, t)
         ts.append(round(t, 3))
         dvs.append(round(tr["dv"], 2) if tr["feasible"] else None)
-        tofs.append(round(tr["tof"], 3) if tr["feasible"] else None)
+        tofs.append(round(tr["tof"], 4) if tr["feasible"] else None)
     tr0 = onet.transfer(i, j, t_dep)
     floor = abs(onet.circ_speed(i) - onet.circ_speed(j)) * 1000.0
     return {"t": ts, "dv": dvs, "tof": tofs, "floor": round(floor, 2),
             "t_dep": round(t_dep, 3), "dv_dep": round(tr0["dv"], 2),
-            "tof_dep": round(tr0["tof"], 3)}
+            "tof_dep": round(tr0["tof"], 4)}
 
 
 def build_trajectory(onet: OrbitalNetwork, route, timeline, n_frames=240,
-                     nu_period_days=6.0, mission=None):
+                     mission=None, xfer_frames=18):
     """Build the full trajectory dict (JSON-serialisable) for the renderers.
 
     route    : node id sequence O..D
     timeline : [{"node", "arrival", "departure"}] in days (departure None at D)
-    mission  : optional MissionValue -> adds per-leg arrival value, per-frame
+    mission  : optional MissionValue -> per-leg arrival value, per-frame
                cumulative value, and the shared per-node v_j(t) curves.
     """
-    # --- legs -------------------------------------------------------------
+    impulsive = (onet.propulsion == "impulsive")
+
+    # ------------------------------------------------------------------ #
+    # Legs: geometry of each transfer + the impulses that bracket it
+    # ------------------------------------------------------------------ #
     legs = []
-    cum = 0.0
-    cum_before = [0.0]
+    cum_dv = 0.0
     for m in range(len(route) - 1):
         i, j = route[m], route[m + 1]
-        t_dep = float(timeline[m]["departure"])
-        t_arr = float(timeline[m + 1]["arrival"])
-        dv = onet.transfer(i, j, t_dep)["dv"]
+        t_arr_i = float(timeline[m]["arrival"])
+        t_dep = float(timeline[m]["departure"])          # step-grid departure
+        t_arr_j = float(timeline[m + 1]["arrival"])
+        tr = onet.transfer(i, j, t_dep)
+        ri, rj = onet.sma(i), onet.sma(j)
+        at = 0.5 * (ri + rj)
+        et = abs(rj - ri) / (ri + rj)
+        # the burn happens at the PHASE-MATCHED instant inside the step
+        tau = t_dep + tr.get("phase_wait", 0.0) if impulsive else t_dep
+        tof = tr.get("hohmann_tof", tr["tof"]) if impulsive else tr["tof"]
+        u_dep = onet.phase_at(i, tau) if impulsive else 0.0
+        ascending = rj >= ri
+        # transfer plane: the plane change is folded into the burn at the LARGER
+        # radius, so the ellipse lies in the plane of the other end
+        raan_x = (onet.raan_at(i, tau) if ascending
+                  else onet.raan_at(j, tau + tof))
         legs.append({
-            "i": i, "j": j, "t_dep": t_dep, "t_arr": t_arr,
-            "tof": t_arr - t_dep, "dv": round(dv, 2),
-            "wait": float(timeline[m]["departure"] - timeline[m]["arrival"]),
-            "curve": _leg_curve(onet, i, j, t_dep),
-            "arr_value": (round(mission.value(j, t_arr), 4)
+            "i": i, "j": j,
+            "t_arr_i": t_arr_i, "t_dep_step": t_dep, "tau": tau,
+            "t_burn2": tau + tof, "t_arr_j": t_arr_j,
+            "wait": tau - t_arr_i, "tof": tof, "phase_wait": tr.get("phase_wait", 0.0),
+            "dv": round(tr["dv"], 3),
+            "dv1": round(tr.get("dv1", tr["dv"] * 0.5), 3),
+            "dv2": round(tr.get("dv2", tr["dv"] * 0.5), 3),
+            "draan": round(tr.get("draan_thrust", 0.0), 4),
+            "at": round(at, 3), "et": round(et, 6),
+            "argp": round((u_dep if ascending else u_dep + 180.0) % 360.0, 4),
+            "raan_x": round(raan_x % 360.0, 4),
+            "u_dep": round(u_dep % 360.0, 4), "ascending": ascending,
+            "cum_dv_before": round(cum_dv, 3),
+            "arr_value": (round(mission.value(j, t_arr_j), 4)
                           if mission is not None else None),
+            "curve": _leg_curve(onet, i, j, t_dep),
         })
-        cum += dv
-        cum_before.append(cum)
-    total_dv = cum
+        cum_dv += tr["dv"]
+    total_dv = cum_dv
     total_days = float(timeline[-1]["arrival"])
-    arr_times = [lg["t_arr"] for lg in legs]
-    arr_vals = [lg["arr_value"] or 0.0 for lg in legs]
-    total_value = sum(arr_vals) if mission is not None else None
+    total_value = (sum(lg["arr_value"] for lg in legs)
+                   if mission is not None else None)
 
-    # --- per-frame chaser state ------------------------------------------
-    def state(tau):
-        # locate the segment containing tau
-        for m in range(len(route) - 1):
-            arr_i = float(timeline[m]["arrival"])
-            dep_i = float(timeline[m]["departure"])
-            arr_j = float(timeline[m + 1]["arrival"])
-            if arr_i <= tau <= dep_i:                       # waiting at route[m]
-                v = route[m]
-                return dict(leg=m, flying=False, alt=onet.G.nodes[v]["alt"],
-                            raan=onet.raan_at(v, tau), cum_dv=cum_before[m])
-            if dep_i < tau <= arr_j:                        # flying leg m
-                i, j = route[m], route[m + 1]
-                f = (tau - dep_i) / (arr_j - dep_i) if arr_j > dep_i else 1.0
-                ai, aj = onet.G.nodes[i]["alt"], onet.G.nodes[j]["alt"]
-                r0 = onet.raan_at(i, dep_i)
-                r1 = onet.raan_at(j, arr_j)
-                while r1 - r0 > 180.0:
-                    r1 -= 360.0
-                while r1 - r0 < -180.0:
-                    r1 += 360.0
-                return dict(leg=m, flying=True, alt=ai + f * (aj - ai),
-                            raan=r0 + f * (r1 - r0),
-                            cum_dv=cum_before[m] + f * legs[m]["dv"])
-        # tau at/after final arrival -> sit on destination
-        v = route[-1]
-        return dict(leg=len(route) - 2, flying=False, alt=onet.G.nodes[v]["alt"],
-                    raan=onet.raan_at(v, tau), cum_dv=total_dv)
+    # ------------------------------------------------------------------ #
+    # Non-uniform frame schedule: waits get frames pro rata, every transfer
+    # gets `xfer_frames` so the ~50-minute rendezvous is visible.
+    # ------------------------------------------------------------------ #
+    wait_spans = [(lg["t_arr_i"], lg["tau"], m) for m, lg in enumerate(legs)]
+    wait_total = sum(max(0.0, b - a) for a, b, _ in wait_spans) or 1.0
+    n_wait_budget = max(1, n_frames - xfer_frames * len(legs))
+
+    def node_state(v, t, leg, scale):
+        return {"t": round(t, 5), "leg": leg, "flying": False, "scale": scale,
+                "cr": [round(onet.sma(v), 3), 0.0, 0.0,
+                       round(onet.raan_at(v, t) % 360.0, 4)],
+                "cnu": round(onet.phase_at(v, t) % 360.0, 4),
+                "alt": round(onet.G.nodes[v]["alt"], 3)}
 
     frames = []
-    for k in range(n_frames + 1):
-        tau = total_days * k / n_frames
-        s = state(tau)
-        nu = 2.0 * math.pi * (tau / nu_period_days % 1.0)
-        cum_value = (sum(v for at, v in zip(arr_times, arr_vals) if at <= tau)
-                     if mission is not None else 0.0)
-        frames.append({
-            "t": round(tau, 3), "leg": s["leg"], "flying": s["flying"],
-            "alt": round(s["alt"], 3), "a": round(RE + s["alt"], 3),
-            "raan": round(wrap180(s["raan"]), 3), "nu": round(nu, 4),
-            "cum_dv": round(s["cum_dv"], 2), "cum_value": round(cum_value, 4),
-        })
+    for m, lg in enumerate(legs):
+        # --- waiting on orbit i ---
+        span = max(0.0, lg["tau"] - lg["t_arr_i"])
+        nw = max(1, int(round(n_wait_budget * span / wait_total)))
+        for k in range(nw):
+            t = lg["t_arr_i"] + span * k / nw
+            fr = node_state(lg["i"], t, m, "wait")
+            fr["cum_dv"] = lg["cum_dv_before"]
+            frames.append(fr)
+        # --- transfer: coast the ellipse, first impulse already spent ---
+        for k in range(xfer_frames + 1):
+            f = k / xfer_frames
+            t = lg["tau"] + lg["tof"] * f
+            nu = (0.0 + 180.0 * f) if lg["ascending"] else (180.0 + 180.0 * f)
+            r = (lg["at"] * (1.0 - lg["et"] ** 2)
+                 / (1.0 + lg["et"] * math.cos(math.radians(nu))))
+            frames.append({
+                "t": round(t, 5), "leg": m, "flying": True, "scale": "xfer",
+                "cr": [lg["at"], lg["et"], lg["argp"], lg["raan_x"]],
+                "cnu": round(nu % 360.0, 4),
+                "alt": round(r - RE, 3),
+                "cum_dv": round(lg["cum_dv_before"] + lg["dv1"], 3)})
+    # --- final hold on the destination ---
+    lastj = route[-1]
+    t_end = float(timeline[-1]["arrival"])
+    for k in range(max(2, xfer_frames // 3)):
+        fr = node_state(lastj, t_end + k * 0.02, len(legs) - 1, "wait")
+        fr["cum_dv"] = round(total_dv, 3)
+        frames.append(fr)
+
+    # cumulative mission value (steps at each arrival)
+    if mission is not None:
+        arr = [(lg["t_arr_j"], lg["arr_value"]) for lg in legs]
+        for fr in frames:
+            fr["cum_value"] = round(sum(v for at, v in arr if at <= fr["t"]), 4)
+    else:
+        for fr in frames:
+            fr["cum_value"] = 0.0
 
     nodes = [{"id": v, "alt": onet.G.nodes[v]["alt"],
               "a": round(onet.sma(v), 3),
               "raan0": onet.G.nodes[v]["raan0"],
-              "rate": round(onet.raan_rate(v), 5)}
+              "rate": round(onet.raan_rate(v), 6),
+              "theta0": onet.G.nodes[v].get("theta0", 0.0),
+              "n": round(onet.phase_rate(v), 4)}
              for v in onet.G.nodes()]
 
-    # shared per-node mission-value curves v_j(t) (same for every solution)
     mission_curves = {}
     if mission is not None:
         H = getattr(mission, "horizon", max(total_days * 1.1, 1500.0))
@@ -142,6 +192,7 @@ def build_trajectory(onet: OrbitalNetwork, route, timeline, n_frames=240,
             "route": list(route), "inclination": onet.inclination_deg,
             "RE": RE, "wet_mass": onet.wet_mass_kg, "fuel": onet.fuel_mass_kg,
             "dv_budget": round(onet.dv_budget, 1),
+            "propulsion": onet.propulsion,
             "total_days": round(total_days, 2), "total_dv": round(total_dv, 2),
             "total_value": (None if total_value is None else round(total_value, 4)),
             "has_mission": mission is not None,

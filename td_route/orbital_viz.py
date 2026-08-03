@@ -79,10 +79,20 @@ def orbits_3d_png(net: OrbitalNetwork, path: str, t: float = 0.0,
         raan = net.raan_at(vtx, t)
         xs, ys, zs = _orbit_points(a, net.inclination_deg, raan)
         ax.plot(xs, ys, zs, color=cols[vtx], lw=1.8, alpha=0.9)
-        # node marker at the orbit's ascending node (nu measured from there)
-        ax.scatter([xs[0]], [ys[0]], [zs[0]], color=cols[vtx], s=45,
-                   edgecolor="k", linewidths=0.5, zorder=5)
-        ax.text(xs[0], ys[0], zs[0], f" {vtx}", fontsize=9, color="0.1")
+        # the mission point's actual POSITION at time t (theta0 + n t): with
+        # true-anomaly matching the rendezvous must meet this point, not just
+        # its orbit.  Falls back to the ascending node if no phase is defined.
+        u = math.radians(net.phase_at(vtx, t)) if "theta0" in net.G.nodes[vtx] \
+            else 0.0
+        ic, is_ = math.cos(math.radians(net.inclination_deg)), \
+            math.sin(math.radians(net.inclination_deg))
+        rc, rs = math.cos(math.radians(raan)), math.sin(math.radians(raan))
+        px0, py0 = a * math.cos(u), a * math.sin(u)
+        py1, pz = py0 * ic, py0 * is_
+        px, py = px0 * rc - py1 * rs, px0 * rs + py1 * rc
+        ax.scatter([px], [py], [pz], color=cols[vtx], s=55,
+                   edgecolor="k", linewidths=0.5, zorder=5, depthshade=False)
+        ax.text(px, py, pz, f"  {vtx}", fontsize=10, color="0.1")
 
     O = net.G.graph.get("origin")
     D = net.G.graph.get("destination")

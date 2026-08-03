@@ -44,21 +44,23 @@ def build_from_cfg(cfg: dict) -> OrbitalNetwork:
     sc = o.get("spacecraft", {})
     orbits = o.get("orbits")
     if orbits:
-        orbits = [(float(a), float(r)) for a, r in orbits]
+        orbits = [tuple(float(x) for x in rec) for rec in orbits]
     return build_orbital_network(
         orbits=orbits or DEFAULT_ORBITS,
         inclination_deg=o.get("inclination_deg", 51.6),
-        thrust_N=sc.get("thrust_N", 0.021),
-        isp_s=sc.get("isp_s", 2000.0),
+        thrust_N=sc.get("thrust_N", 490.0),
+        isp_s=sc.get("isp_s", 315.5),
         wet_mass_kg=sc.get("wet_mass_kg", 400.0),
         fuel_mass_kg=sc.get("fuel_mass_kg", 100.0),
         ref_mass_kg=sc.get("ref_mass_kg"),
         t_start=o.get("t_start", 0.0),
-        t_end=o.get("t_end", 730.0),
-        dt_days=o.get("dt_days", 0.5),
+        t_end=o.get("t_end", 1300.0),
+        dt_days=o.get("dt_days", 1.0),
         transit_drift=o.get("transit_drift", True),
+        propulsion=o.get("propulsion", "impulsive"),
+        phase_tol_deg=o.get("phase_tol_deg", 0.05),
         origin=o.get("origin", 1),
-        destination=o.get("destination", 10),
+        destination=o.get("destination"),
     )
 
 

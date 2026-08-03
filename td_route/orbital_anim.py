@@ -25,23 +25,43 @@ _VENDOR = os.path.join(os.path.dirname(__file__), "vendor")
 # ========================================================================== #
 # MP4 (matplotlib + imageio-ffmpeg)
 # ========================================================================== #
-def _orbit_xyz(a, inc_deg, raan_deg, n=160):
+def _rot(x, y, inc_deg, raan_deg):
+    """Rotate in-plane (x, y) by inclination then RAAN -> ECI xyz."""
+    inc, raan = math.radians(inc_deg), math.radians(raan_deg)
+    y1, z1 = y * math.cos(inc), y * math.sin(inc)
+    return (x * math.cos(raan) - y1 * math.sin(raan),
+            x * math.sin(raan) + y1 * math.cos(raan), z1)
+
+
+def _orbit_xyz(a, inc_deg, raan_deg, n=200, e=0.0, argp_deg=0.0):
+    """Sample a conic (circle when e=0, else an ellipse with its focus at the
+    origin and periapsis argp from the ascending node)."""
     import numpy as np
+    nu = np.linspace(0.0, 2 * math.pi, n)
+    r = a * (1 - e * e) / (1 + e * np.cos(nu))
+    u = nu + math.radians(argp_deg)
+    x, y = r * np.cos(u), r * np.sin(u)
     inc, raan = math.radians(inc_deg), math.radians(raan_deg)
-    nu = np.linspace(0, 2 * math.pi, n)
-    x, y = a * np.cos(nu), a * np.sin(nu)
-    y1, z1, x1 = y * math.cos(inc), y * math.sin(inc), x
-    xr = x1 * math.cos(raan) - y1 * math.sin(raan)
-    yr = x1 * math.sin(raan) + y1 * math.cos(raan)
-    return xr, yr, z1
+    y1, z1 = y * math.cos(inc), y * math.sin(inc)
+    return (x * math.cos(raan) - y1 * math.sin(raan),
+            x * math.sin(raan) + y1 * math.cos(raan), z1)
 
 
-def _point_xyz(a, inc_deg, raan_deg, nu):
-    inc, raan = math.radians(inc_deg), math.radians(raan_deg)
-    x, y = a * math.cos(nu), a * math.sin(nu)
-    y1, z1, x1 = y * math.cos(inc), y * math.sin(inc), x
-    return (x1 * math.cos(raan) - y1 * math.sin(raan),
-            x1 * math.sin(raan) + y1 * math.cos(raan), z1)
+def _pos_from(r, u_deg, inc_deg, raan_deg):
+    """ECI position at radius r and argument of latitude u."""
+    u = math.radians(u_deg)
+    return _rot(r * math.cos(u), r * math.sin(u), inc_deg, raan_deg)
+
+
+def _conic_pos(cr, nu_deg, inc_deg):
+    """Chaser position on cr = [a, e, argp, raan] at true anomaly nu."""
+    a, e, argp, raan = cr
+    r = a * (1 - e * e) / (1 + e * math.cos(math.radians(nu_deg)))
+    return _pos_from(r, argp + nu_deg, inc_deg, raan)
+
+
+def _point_xyz(a, inc_deg, raan_deg, nu):        # legacy helper (nu in radians)
+    return _pos_from(a, math.degrees(nu), inc_deg, raan_deg)
 
 
 def save_mp4(traj: dict, path: str, fps: int = 20, dpi: int = 110):
@@ -82,15 +102,28 @@ def save_mp4(traj: dict, path: str, fps: int = 20, dpi: int = 110):
         fr = frames[k]; leg = legs[fr["leg"]]; cur = leg["curve"]
         ax3d.clear()
         ax3d.plot_surface(ex, ey, ez, color="#3a6ea5", alpha=0.22, linewidth=0)
+        tj = legs[fr["leg"]]["j"]                       # next target
         for nd in nodes:
             raan = nd["raan0"] + nd["rate"] * fr["t"]
+            isT = (nd["id"] == tj)
             xs, ys, zs = _orbit_xyz(nd["a"], inc, raan)
-            ax3d.plot(xs, ys, zs, color=col[nd["id"]], lw=1.2, alpha=0.9)
+            ax3d.plot(xs, ys, zs, color=col[nd["id"]],
+                      lw=2.0 if isT else 1.0, alpha=1.0 if isT else 0.45)
+            # the target's POSITION (true anomaly now matters)
+            u = nd["theta0"] + nd["n"] * fr["t"]
+            qx, qy, qz = _pos_from(nd["a"], u, inc, raan)
+            ax3d.scatter([qx], [qy], [qz], color=col[nd["id"]],
+                         s=34 if isT else 14, depthshade=False)
             px, py, pz = _point_xyz(nd["a"], inc, raan, 0.6)
-            ax3d.text(px, py, pz, str(nd["id"]), fontsize=9, color="0.1",
+            ax3d.text(px, py, pz, str(nd["id"]),
+                      fontsize=11 if isT else 9, color="0.1",
                       ha="center", va="center")
-        xs, ys, zs = _orbit_xyz(fr["a"], inc, fr["raan"])
-        ax3d.plot(xs, ys, zs, color="red", lw=2.6)      # chaser = red ORBIT only
+        # chaser: the real conic (transfer ELLIPSE while flying) + its position
+        cr = fr["cr"]
+        xs, ys, zs = _orbit_xyz(cr[0], inc, cr[3], e=cr[1], argp_deg=cr[2])
+        ax3d.plot(xs, ys, zs, color="red", lw=2.6)
+        cx, cy, cz = _conic_pos(cr, fr["cnu"], inc)
+        ax3d.scatter([cx], [cy], [cz], color="red", s=55, depthshade=False)
         R = amax * 1.02
         ax3d.set_xlim(-R, R); ax3d.set_ylim(-R, R); ax3d.set_zlim(-R, R)
         ax3d.set_box_aspect((1, 1, 1)); ax3d.set_xticks([]); ax3d.set_yticks([])
@@ -135,11 +168,19 @@ def save_mp4(traj: dict, path: str, fps: int = 20, dpi: int = 110):
         for ax in axp:
             ax.grid(alpha=0.3); ax.tick_params(labelsize=7)
 
-        state = ("flying %d→%d" % (leg["i"], leg["j"])) if fr["flying"] \
-            else ("waiting @ %d for %d" % (leg["i"], leg["j"]))
+        if fr["flying"]:
+            state = ("TRANSFER %d→%d (Hohmann %.0f min, minutes/frame)"
+                     % (leg["i"], leg["j"], leg["tof"] * 1440))
+        elif fr["t"] >= M["total_days"] - 1e-9:
+            state = "ARRIVED @ %d — rendezvous complete" % leg["j"]
+        else:
+            state = ("waiting @ %d for the %d window/phase (days/frame)"
+                     % (leg["i"], leg["j"]))
+        val = ("" if M.get("total_value") is None
+               else f"value {fr.get('cum_value', 0):.2f}/{M['total_value']:.2f}      ")
         txt.set_text(f"elapsed {fr['t']:.1f} / {M['total_days']:.0f} d      "
-                     f"total ΔV {fr['cum_dv']:.0f} / {M['dv_budget']:.0f} m/s"
-                     f"      route {'→'.join(map(str, M['route']))}   [{state}]")
+                     f"{val}total ΔV {fr['cum_dv']:.0f} / {M['dv_budget']:.0f} m/s"
+                     f"      {'→'.join(map(str, M['route']))}   [{state}]")
 
     anim = FuncAnimation(fig, draw, frames=len(frames), interval=1000 / fps)
     anim.save(path, writer=FFMpegWriter(fps=fps), dpi=dpi)
@@ -226,7 +267,7 @@ _HTML_TEMPLATE = r"""<!doctype html>
   <div>elapsed <b><span id="t_now">0</span></b> / <span id="t_tot">0</span> d</div>
   <div id="valbox">mission value <b><span id="val_now">0</span></b> / <span id="val_tot">0</span></div>
   <div>total &Delta;V <b><span id="dv_now">0</span></b> / <span id="dv_bud">0</span> m/s</div>
-  <div>leg <b><span id="leg_now">-</span></b></div>
+  <div><b><span id="leg_now">-</span></b> <span style="color:#8aa0c0">(<span id="scale_now">-</span>)</span></div>
 </div>
 
 <script>/*__THREE__*/</script>
@@ -303,12 +344,24 @@ function ringPts(a, incDeg, n){          // ring at RAAN=0, inclination incDeg
     p.push(new THREE.Vector3(x*SC, y*ic*SC, y*is*SC)); }
   return p;
 }
-function orbitPoint(a, incDeg, raanDeg, nu){  // single point WITH raan
+// Position at radius r and argument of latitude u (both measured in the orbit
+// plane from the ascending node), for a plane of inclination inc and node raan.
+function posFrom(r, uDeg, incDeg, raanDeg){
   const ic=Math.cos(incDeg*DEG), is=Math.sin(incDeg*DEG);
   const rc=Math.cos(raanDeg*DEG), rs=Math.sin(raanDeg*DEG);
-  let x=a*Math.cos(nu), y=a*Math.sin(nu);
-  let y1=y*ic, z1=y*is, x1=x;
+  const cu=Math.cos(uDeg*DEG), su=Math.sin(uDeg*DEG);
+  const x=r*cu, y=r*su;
+  const y1=y*ic, z1=y*is, x1=x;
   return new THREE.Vector3((x1*rc-y1*rs)*SC, (x1*rs+y1*rc)*SC, z1*SC);
+}
+function orbitPoint(a, incDeg, raanDeg, nuRad){   // circle, nu in RADIANS
+  return posFrom(a, nuRad*180/Math.PI, incDeg, raanDeg);
+}
+// Chaser conic: cr = [a, e, argp, raan]; true anomaly nu (deg).
+function conicPos(cr, nuDeg){
+  const [a,e,argp,raan]=cr;
+  const r=a*(1-e*e)/(1+e*Math.cos(nuDeg*DEG));
+  return posFrom(r, argp+nuDeg, inc, raan);
 }
 function textSprite(txt, color){
   const c=document.createElement('canvas'); c.width=64; c.height=64;
@@ -331,8 +384,12 @@ nodes.forEach(nd=>{
   const line=new THREE.Mesh(g, new THREE.MeshBasicMaterial({
     color:nodeColor[nd.id], transparent:true, opacity:0.55}));
   const label=textSprite(String(nd.id), '#ffffff');
-  scene.add(line); scene.add(label);
-  nodeObj[nd.id]={line, label, nd};
+  // the target's actual POSITION on its orbit (true anomaly matters now:
+  // rendezvous requires the chaser to meet this dot, not just its ring)
+  const dot=new THREE.Mesh(new THREE.SphereGeometry(0.10,12,10),
+    new THREE.MeshBasicMaterial({color:nodeColor[nd.id]}));
+  scene.add(line); scene.add(label); scene.add(dot);
+  nodeObj[nd.id]={line, label, dot, nd};
 });
 
 // WebGL ignores LineBasicMaterial.linewidth, so a genuinely THICK ring needs a
@@ -348,11 +405,24 @@ function ringMesh(tube, color, opacity){
 // target keeps its identity and you can tell when the red chaser ring has
 // converged onto it.
 const tgtRing = ringMesh(0.007, 0xffffff, 1.0); scene.add(tgtRing);
-// chaser orbit: BOLD red ring. true anomaly is ignored (arrival = orbit match),
-// so the chaser IS the whole red orbit -- no position marker.
-const agentLine = ringMesh(0.011, 0xff2020, 1.0); scene.add(agentLine);
+
+// Chaser orbit: BOLD red conic. A circle while parked on a node, the TRANSFER
+// ELLIPSE while flying -- built as a unit torus scaled to (a, b) and shifted by
+// -a*e so the focus sits at Earth's centre, then rotated argp / inc / raan
+// through a nested group (three.js has no ZXZ Euler order).
+const agentOuter = new THREE.Group(); scene.add(agentOuter);       // rotation.z = raan
+const agentMid   = new THREE.Group(); agentOuter.add(agentMid);    // rotation.x = inc
+const agentArgp  = new THREE.Group(); agentMid.add(agentArgp);     // rotation.z = argp
+const agentLine  = new THREE.Mesh(new THREE.TorusGeometry(1, 0.011, 8, 220),
+   new THREE.MeshBasicMaterial({color:0xff2020}));
+agentArgp.add(agentLine);
+// the chaser's own POSITION (true anomaly) -- must land on the target dot
+const agentDot = new THREE.Mesh(new THREE.SphereGeometry(0.16,14,12),
+   new THREE.MeshBasicMaterial({color:0xff4040}));
+scene.add(agentDot);
 
 function raanOf(nd, t){ return nd.raan0 + nd.rate*t; }
+function phaseOf(nd, t){ return nd.theta0 + nd.n*t; }   // argument of latitude
 
 function updateScene(fr){
   const t=fr.t;
@@ -361,9 +431,11 @@ function updateScene(fr){
     const o=nodeObj[nd.id]; const raan=raanOf(nd,t);
     o.line.rotation.z=raan*DEG;
     o.label.position.copy(orbitPoint(nd.a, inc, raan, 0.6));
+    o.dot.position.copy(posFrom(nd.a, phaseOf(nd,t), inc, raan));
     const isT=(nd.id===tj);                // emphasise the next target
     o.line.material.opacity = isT ? 1.0 : 0.5;
     o.label.scale.setScalar(isT ? 1.8 : 1.05);
+    o.dot.scale.setScalar(isT ? 1.7 : 1.0);
   });
   // thicker ring on the next target orbit, in THAT NODE'S OWN colour
   // (follows its RAAN drift)
@@ -372,9 +444,14 @@ function updateScene(fr){
   tgtRing.scale.setScalar(tnd.a*SC);
   tgtRing.rotation.z=raanOf(tnd,t)*DEG;
   tgtRing.visible=nodeObj[tj].line.visible;
-  // chaser: torus radius is 1 (no SC baked in) -> scale by a*SC
-  agentLine.scale.setScalar(fr.a*SC);
-  agentLine.rotation.z=fr.raan*DEG;
+  // chaser conic: cr = [a, e, argp, raan]
+  const cr=fr.cr, a=cr[0], e=cr[1], b=a*Math.sqrt(Math.max(0,1-e*e));
+  agentOuter.rotation.z = cr[3]*DEG;
+  agentMid.rotation.x   = inc*DEG;
+  agentArgp.rotation.z  = cr[2]*DEG;
+  agentLine.scale.set(a*SC, b*SC, 1);     // unit torus -> ellipse (a, b)
+  agentLine.position.x = -a*e*SC;          // shift so the FOCUS is at Earth
+  agentDot.position.copy(conicPos(cr, fr.cnu));
 }
 
 // ---------- checkboxes ----------
@@ -385,7 +462,9 @@ nodes.forEach(nd=>{
     '<input type="checkbox" checked data-id="'+nd.id+'">'+nd.id;
   checks.appendChild(l);
   l.querySelector('input').addEventListener('change',e=>{
-    const o=nodeObj[nd.id]; o.line.visible=e.target.checked; o.label.visible=e.target.checked;
+    const o=nodeObj[nd.id];
+    o.line.visible=e.target.checked; o.label.visible=e.target.checked;
+    o.dot.visible=e.target.checked;
   });
 });
 const al=document.createElement('label');
@@ -393,7 +472,7 @@ al.innerHTML='<span class="sw" style="background:#ff3b3b"></span>'+
   '<input type="checkbox" checked id="agentChk">chaser';
 checks.appendChild(al);
 al.querySelector('input').addEventListener('change',e=>{
-  agentLine.visible=e.target.checked;
+  agentLine.visible=e.target.checked; agentDot.visible=e.target.checked;
 });
 
 // ---------- 2D panels ----------
@@ -493,14 +572,24 @@ function updatePanels(k){
 document.getElementById('dv_bud').textContent=M.dv_budget.toFixed(0);
 document.getElementById('valbox').style.display = M.has_mission ? '' : 'none';
 function updateStatus(k){ const fr=frames[k]; const leg=legs[fr.leg];
-  document.getElementById('t_now').textContent=fr.t.toFixed(1);
+  document.getElementById('t_now').textContent=fr.t.toFixed(2);
   document.getElementById('dv_now').textContent=fr.cum_dv.toFixed(0);
   if(M.has_mission){
     document.getElementById('val_now').textContent=(fr.cum_value||0).toFixed(2);
     document.getElementById('val_tot').textContent=(M.total_value||0).toFixed(2);
   }
-  document.getElementById('leg_now').textContent=
-    (fr.flying?('flying '+leg.i+'→'+leg.j):('waiting @ '+leg.i+' for '+leg.j));
+  // the two timescales: month-long waits vs the ~50-minute transfer
+  let s;
+  if(fr.flying){
+    s='TRANSFER '+leg.i+'→'+leg.j+'  (Hohmann, '+(leg.tof*1440).toFixed(0)+' min)';
+  } else if(fr.t>=M.total_days-1e-9){
+    s='ARRIVED @ '+leg.j+'  — rendezvous complete';
+  } else {
+    s='waiting @ '+leg.i+'  for the '+leg.j+' window/phase';
+  }
+  document.getElementById('leg_now').textContent=s;
+  document.getElementById('scale_now').textContent =
+    fr.flying ? 'minutes/frame' : 'days/frame';
 }
 
 // ---------- animation loop + solution selector ----------

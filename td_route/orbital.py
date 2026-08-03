@@ -113,11 +113,15 @@ class OrbitalNetwork:
     """
 
     # --- spacecraft (chaser) -------------------------------------------------
-    thrust_N: float = 0.021           # max thrust, N          (21 mN)
-    isp_s: float = 2000.0             # specific impulse, s
+    thrust_N: float = 490.0           # max thrust, N
+    isp_s: float = 315.5              # specific impulse, s
     wet_mass_kg: float = 400.0        # initial (wet) mass, kg
     fuel_mass_kg: float = 100.0       # usable propellant, kg
     ref_mass_kg: float | None = None  # reference mass for ToF; None -> wet mass
+    # "impulsive"  -> 2-impulse Hohmann + plane change, TRUE-ANOMALY matched
+    # "low_thrust" -> continuous Edelbaum spiral (the legacy model)
+    propulsion: str = "impulsive"
+    phase_tol_deg: float = 0.05       # |phase error| accepted as "matched"
 
     # --- constellation -------------------------------------------------------
     inclination_deg: float = 51.6     # shared orbital inclination
@@ -189,6 +193,86 @@ class OrbitalNetwork:
         """RAAN of node v's orbit at elapsed time t (days)  [deg]."""
         return self.G.nodes[v]["raan0"] + self.raan_rate(v) * t
 
+    # ------------------------------------------------------------------ #
+    # In-plane phase (true anomaly / argument of latitude), impulsive model
+    # ------------------------------------------------------------------ #
+    def phase_rate(self, v) -> float:
+        """Mean motion in deg/day (circular => true anomaly advances at n)."""
+        return self.mean_motion(v) * SECONDS_PER_DAY * RAD2DEG
+
+    def phase_at(self, v, t: float) -> float:
+        """Argument of latitude u_v(t) [deg], measured from the ascending node.
+        Circular orbit => u = theta0 + n t (the AOP is undefined, so this single
+        angle fixes the object's position in its plane)."""
+        return self.G.nodes[v].get("theta0", 0.0) + self.phase_rate(v) * t
+
+    # ------------------------------------------------------------------ #
+    # Impulsive transfer: 2-impulse Hohmann + plane change
+    # ------------------------------------------------------------------ #
+    def hohmann(self, i, j) -> dict:
+        """Coplanar Hohmann elements between the two circular orbits.
+
+        Returns speeds at both ends plus the transfer time (HALF the period of
+        the transfer ellipse), all independent of the plane change and of t:
+            {"dv1", "dv2" [m/s, coplanar], "tof_days", "vi","vj","vti","vtj"}.
+        """
+        ri, rj = self.sma(i), self.sma(j)
+        at = 0.5 * (ri + rj)
+        vi = math.sqrt(MU / ri) * 1000.0                 # m/s
+        vj = math.sqrt(MU / rj) * 1000.0
+        vti = math.sqrt(MU * (2.0 / ri - 1.0 / at)) * 1000.0   # on transfer @ ri
+        vtj = math.sqrt(MU * (2.0 / rj - 1.0 / at)) * 1000.0   # on transfer @ rj
+        tof = math.pi * math.sqrt(at**3 / MU) / SECONDS_PER_DAY  # days
+        return {"dv1": abs(vti - vi), "dv2": abs(vj - vtj), "tof_days": tof,
+                "vi": vi, "vj": vj, "vti": vti, "vtj": vtj,
+                "ri": ri, "rj": rj, "at": at}
+
+    def _impulsive_dv(self, i, j, theta: float) -> tuple:
+        """(dv1, dv2) [m/s] of the 2-impulse transfer whose plane change is
+        theta [rad].  The rotation is folded into the burn at the LARGER radius
+        (lower speed), which is where a plane change is cheapest."""
+        h = self.hohmann(i, j)
+        if h["rj"] >= h["ri"]:            # ascending: apoapsis at rj -> 2nd burn
+            dv1 = abs(h["vti"] - h["vi"])
+            dv2 = math.sqrt(max(0.0, h["vtj"]**2 + h["vj"]**2
+                                - 2.0 * h["vtj"] * h["vj"] * math.cos(theta)))
+        else:                             # descending: apoapsis at ri -> 1st burn
+            dv1 = math.sqrt(max(0.0, h["vti"]**2 + h["vi"]**2
+                                - 2.0 * h["vti"] * h["vi"] * math.cos(theta)))
+            dv2 = abs(h["vj"] - h["vtj"])
+        return dv1, dv2
+
+    def phase_delay(self, i, j, t: float) -> float:
+        """Wait [days] from t until the FIRST instant the phase permits a
+        rendezvous, i.e. the Hohmann arrival lands exactly on target j.
+
+        A Hohmann transfer sweeps 180 deg, so departing at tau puts the chaser
+        at u_i(tau) + 180 on arrival at tau + ToF, and rendezvous needs
+
+            u_i(tau) + 180  ==  u_j(tau + ToF)   (mod 360).
+
+        With u_x(t) = theta0_x + n_x t this is linear in tau, so the phase error
+        sweeps through zero every 360/|n_j - n_i| days (hours for LEO pairs) and
+        the smallest non-negative solution is returned.  ToF does NOT depend on
+        the plane change, so there is no fixed point to iterate.
+        """
+        tof = self.hohmann(i, j)["tof_days"]
+        ni, nj = self.phase_rate(i), self.phase_rate(j)
+        k = nj - ni                                       # deg/day
+        # phase error at tau:  A + k*tau  (mod 360)
+        A = (self.G.nodes[j].get("theta0", 0.0) + nj * tof
+             - self.G.nodes[i].get("theta0", 0.0) - 180.0)
+        if abs(k) < 1e-12:                                # co-altitude: never drifts
+            return 0.0 if abs(wrap180(A)) <= self.phase_tol_deg else math.inf
+        psi = -(A + k * t)                                # need k*delta == psi
+        return ((psi if k > 0 else -psi) % 360.0) / abs(k)
+
+    def phase_error(self, i, j, t: float) -> float:
+        """Rendezvous phase error [deg] for a departure exactly at t (0 = the
+        arrival lands on the target)."""
+        tof = self.hohmann(i, j)["tof_days"]
+        return wrap180(self.phase_at(j, t + tof) - self.phase_at(i, t) - 180.0)
+
     def mean_drift_rate(self, i, j) -> float:
         """Effective RAAN drift rate the chaser feels DURING the i->j transfer
         [deg/day].
@@ -245,6 +329,35 @@ class OrbitalNetwork:
         [rad] (departure-only geometry; see transfer() for transit drift)."""
         return self._plane_angle(self.rel_raan(i, j, t))
 
+    def _transfer_impulsive(self, i, j, t: float) -> dict:
+        """Impulsive arc cost: wait for the phase, then a 2-impulse Hohmann whose
+        plane change absorbs whatever RAAN offset the departure instant leaves.
+
+        The leg is  [t -> t+delta]  waiting on orbit i for the rendezvous phase,
+        then [t+delta -> t+delta+ToF] on the transfer ellipse.  Planes are matched
+        at ARRIVAL, so the rotation the burn must perform follows from
+        dOmega = Omega_j(tau+ToF) - Omega_i(tau) -- J2 keeps drifting the two
+        nodes apart, so WHEN you leave sets the plane-change bill (waiting for a
+        window is cheap; leaving at the wrong time is not).
+        """
+        h = self.hohmann(i, j)
+        tof = h["tof_days"]
+        delta = self.phase_delay(i, j, t)
+        if not math.isfinite(delta):                # phase can never align
+            return {"dv": self.dv_budget, "tof": tof, "theta": math.nan,
+                    "draan_thrust": math.nan, "draan_dep": math.nan,
+                    "phase_wait": math.inf, "hohmann_tof": tof,
+                    "dv1": math.nan, "dv2": math.nan, "feasible": False}
+        tau = t + delta                             # phase-matched departure
+        draan = self.raan_at(j, tau + tof) - self.raan_at(i, tau)
+        theta = self._plane_angle(draan)
+        dv1, dv2 = self._impulsive_dv(i, j, theta)
+        dv = dv1 + dv2
+        return {"dv": dv, "tof": delta + tof, "theta": theta,
+                "draan_thrust": wrap180(draan), "draan_dep": wrap180(draan),
+                "phase_wait": delta, "hohmann_tof": tof,
+                "dv1": dv1, "dv2": dv2, "feasible": dv <= self.dv_budget}
+
     # ------------------------------------------------------------------ #
     # Arc cost solver (dV, ToF) with optional transit-drift self-consistency
     # ------------------------------------------------------------------ #
@@ -280,6 +393,9 @@ class OrbitalNetwork:
             each window earlier (the "lead angle") and narrows it; the dV floor
             (pure altitude, theta=0) is unchanged.
         """
+        if self.propulsion == "impulsive":
+            return self._transfer_impulsive(i, j, t)
+
         td = self.transit_drift if transit_drift is None else transit_drift
         draan_dep = self.raan_at(j, t) - self.raan_at(i, t)          # deg, unwrapped
 

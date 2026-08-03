@@ -23,43 +23,50 @@ network_number: "001"
 orbital:
   inclination_deg: 51.6      # shared orbital inclination of all nodes
   t_start: 0                 # mission epoch (days)
-  t_end: 730                 # planning horizon (days from epoch)
-  dt_days: 0.5               # time discretisation (see note below)
-  transit_drift: true        # match RAAN at ARRIVAL (account for drift during
-                             #   the transfer); false = match at departure only
+  t_end: 1300                # planning horizon (days from epoch)
+  dt_days: 1                 # time discretisation (see note below)
+  propulsion: impulsive      # "impulsive" = 2-impulse Hohmann + plane change,
+                             #   TRUE-ANOMALY matched | "low_thrust" = Edelbaum
+  phase_tol_deg: 0.05        # phase-match tolerance (impulsive)
+  transit_drift: true        # low_thrust only: match RAAN at arrival
   origin: 1                  # start orbit (node id)
-  destination: 10            # target orbit (node id)
+  destination: 8             # target orbit (node id)
 
-  spacecraft:                # low-thrust chaser
-    thrust_N: 0.021          # max thrust (21 mN)
-    isp_s: 2000              # specific impulse (s)
+  spacecraft:                # impulsive chaser
+    thrust_N: 490            # max thrust (N)
+    isp_s: 315.5             # specific impulse (s)
     wet_mass_kg: 400         # initial mass
-    fuel_mass_kg: 100        # usable propellant  -> dV budget ~5642 m/s
-    ref_mass_kg: null        # reference mass for ToF; null = wet mass
+    fuel_mass_kg: 100        # usable propellant -> dV budget = 890.1 m/s
+                             #   (= Isp*g0*ln(400/300); a 100 m/s burn = 12.7 kg
+                             #    in 80 s, so "impulsive" is well justified)
+    ref_mass_kg: null        # reference mass; null = wet mass
 
-  # 10 circular orbits: [altitude_km, raan0_deg].  Altitudes are all DISTINCT
-  # (so every pair has a finite RAAN-realignment / "synodic" period); raan0 is
-  # staggered so different arcs' windows fall at different times.
+  # 8 circular orbits: [altitude_km, raan0_deg, theta0_deg].
+  #   theta0 = argument of latitude at epoch (the phase that must match on
+  #   rendezvous).  raan0 was placed by orbital_instance.design_orbits so each
+  #   CONSECUTIVE pair's J2 alignment window lands at 120, 260, 400, 540, 680,
+  #   820, 960 days -- adjacent LEO altitudes drift only ~0.1 deg/day apart, so
+  #   each such pair gets one window in the horizon and its date is the knob.
   orbits:
-    - [520,    0]            # 1  origin  (lowest, fastest drift ~4.70 deg/day)
-    - [610,  145]            # 2
-    - [705,   40]            # 3
-    - [800,  205]            # 4
-    - [890,   95]            # 5
-    - [980,  300]            # 6
-    - [1075, 120]            # 7
-    - [1170, 250]            # 8
-    - [1280, 175]            # 9
-    - [1400,  60]            # 10 destination (highest, slowest ~3.09 deg/day)
+    - [500,   0.0, 116.6]    # 1  origin  (lowest, drift -4.752 deg/day)
+    - [565, 341.5,  54.3]    # 2
+    - [630, 303.2, 234.3]    # 3
+    - [700, 242.3,  26.1]    # 4
+    - [775, 158.2, 192.9]    # 5
+    - [845,  63.8, 131.6]    # 6
+    - [900, 337.8,  20.9]    # 7
+    - [950, 249.2, 182.7]    # 8  destination (highest, drift -3.807 deg/day)
 
-  # Discretisation rationale (100 kg fuel, <=10 points, fixed O/D):
-  #   * dV budget ~5642 m/s; a plane change costs ~160 m/s per degree of RAAN
-  #     misalignment, so windows must be caught within ~1 deg.
-  #   * Fastest relative RAAN drift among these orbits ~1.61 deg/day, so
-  #     dt <= 1 deg / 1.61 = 0.62 day resolves any window to <1 deg -> dt=0.5 d.
-  #   * Leg ToF (~30-90 d) and waits (tens-hundreds of d) are many multiples of
-  #     dt, so rounding ToF up to a step adds <2%.  Use dt=0.25 d for tighter
-  #     window capture at 2x the time-expanded graph size.
+  # Sizing / discretisation rationale (impulsive, 100 kg fuel, budget 890 m/s):
+  #   * a Hohmann step costs ~54 m/s per 100 km -> the 500-950 km span is
+  #     ~240 m/s; visiting ALL 8 nodes costs ~285 m/s (monotonic climbs
+  #     telescope), leaving wide margin inside 890 m/s.
+  #   * an impulsive plane change costs ~103 m/s per DEGREE of residual RAAN, so
+  #     departures must sit in the J2 windows; a 1-day grid leaves at most half a
+  #     day of drift (~0.05-0.08 deg -> 5-8 m/s per leg), so dt = 1 day is ample.
+  #   * transfer ToF is only ~50 min; each leg's duration is dominated by the
+  #     wait for the rendezvous PHASE (~4-6 days, since the relative phase of an
+  #     adjacent pair recycles in days), still a few dt steps.
 
   plot:                      # examples/plot_transfer.py
     arc: [1,10]                # [i, j] to profile; null = origin -> destination
