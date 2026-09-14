@@ -1,7 +1,7 @@
 """
 Exact epsilon-constraint method (EECM) for the bi-objective TD route planning
 problem (Section IV.B), using PuLP + CBC. Targets SMALL instances; use
-td_route.nsga2 for large ones.
+td_route.road.nsga2 for large ones.
 
 Modules:
     time_expanded : the reachable time-expanded variable set (model P)

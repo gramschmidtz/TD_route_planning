@@ -62,6 +62,18 @@ desktop.ini
 /pareto_net*.json
 
 # ---------------------------------------------------------------------------
+# Research outputs / scratch
+#   outputs/<topic>/  figures, logs, solution JSON -- regenerable, never committed
+#                     (the .gitkeep files keep the folders so scripts can write)
+#   scratch/          throwaway test scripts
+# ---------------------------------------------------------------------------
+/outputs/**
+!/outputs/*/
+!/outputs/*/.gitkeep
+/scratch/
+opt_trj/_cache/
+
+# ---------------------------------------------------------------------------
 # Fixed 120-network benchmark
 # ---------------------------------------------------------------------------
 # The dataset/ folder is COMMITTED on purpose: it is the fixed, numbered

@@ -12,8 +12,8 @@ Two solvers share one problem layer (network.py / instance.py):
 f1 = total preference score   (maximised)
 f2 = total travel time        (minimised)
 """
-from .network import TDNetwork
-from .instance import generate_random_network, pick_od, build_benchmark
+from .road.network import TDNetwork
+from .road.instance import generate_random_network, pick_od, build_benchmark
 
 __all__ = [
     "TDNetwork",

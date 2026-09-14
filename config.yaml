@@ -1,8 +1,8 @@
 # =====================================================================
 # Central configuration for the bi-objective TD route planner.
 # Edit values HERE; the scripts read this file and take no numeric CLI args.
-#   python -m examples.run_planner          # uses ./config.yaml
-#   python -m examples.run_planner --config other.yaml
+#   python -m examples.road.run_planner          # uses ./config.yaml
+#   python -m examples.road.run_planner --config other.yaml
 # All time values are minutes from midnight (7:00 = 420, 21:00 = 1260).
 # =====================================================================
 
@@ -18,7 +18,7 @@ network_number: "001"
 #   precession: different altitudes drift RAAN at different rates, so the
 #   chaser waits at its origin orbit for a RAAN-alignment window before the
 #   single Edelbaum low-thrust transfer (semi-analytic; no drag, no disposal).
-#     python -m examples.plot_transfer            # ToF & dV vs departure time
+#     python -m examples.orbital.plot_transfer            # ToF & dV vs departure time
 # ---------------------------------------------------------------------
 orbital:
   inclination_deg: 51.6      # shared orbital inclination of all nodes
@@ -43,7 +43,7 @@ orbital:
 
   # 8 circular orbits: [altitude_km, raan0_deg, theta0_deg].
   #   theta0 = argument of latitude at epoch (the phase that must match on
-  #   rendezvous).  raan0 was placed by orbital_instance.design_orbits so each
+  #   rendezvous).  raan0 was placed by td_route.orbital.instance.design_orbits so each
   #   CONSECUTIVE pair's J2 alignment window lands at 120, 260, 400, 540, 680,
   #   820, 960 days -- adjacent LEO altitudes drift only ~0.1 deg/day apart, so
   #   each such pair gets one window in the horizon and its date is the knob.
@@ -68,17 +68,17 @@ orbital:
   #     wait for the rendezvous PHASE (~4-6 days, since the relative phase of an
   #     adjacent pair recycles in days), still a few dt steps.
 
-  plot:                      # examples/plot_transfer.py
+  plot:                      # examples/orbital/plot_transfer.py
     arc: [1,2]                 # [i, j] to profile; null = origin -> destination
     horizon_days: null       # x-axis span; null = ~2 synodic periods
-    out: transfer_profile.png
+    out: outputs/orbital/transfer_profile.png
 
-  viz:                       # examples/plot_orbital_network.py
-    png_3d: orbital_network_3d.png     # static 3D Earth + orbits
-    png_drift: orbital_raan_drift.png  # RAAN drift vs time (windows = crossings)
-    html_3d: orbital_network_3d.html   # interactive 3D (needs plotly)
+  viz:                       # examples/orbital/plot_network.py
+    png_3d: outputs/orbital/orbital_network_3d.png # static 3D Earth + orbits
+    png_drift: outputs/orbital/orbital_raan_drift.png # RAAN drift vs time (windows = crossings)
+    html_3d: outputs/orbital/orbital_network_3d.html # interactive 3D (needs plotly)
 
-  # Exact epsilon-constraint planner on the orbital net (examples.run_orbital_planner).
+  # Exact epsilon-constraint planner on the orbital net (examples.orbital.run_planner).
   #   - time is discretised at eecm.dt_days (1 day); ToF is rounded up to steps.
   #   - infeasible arcs (dV > budget at that departure) are excluded automatically.
   #   - formulation (photo):  max sum v_ijt x_ijt  /  min sum dv_ijt x_ijt,
@@ -105,12 +105,12 @@ orbital:
     delta: null              # epsilon step; null = 0.3 (mission_value) /
                              #   1 (max_visits) / 100 (min_dv)
     time_limit: 120          # per-solve MILP limit (s); uses exact.solver/cplex_path
-    out: orbital_pareto.png  # Pareto-front figure
-    solutions: orbital_solutions.json   # run_orbital_planner WRITES the solved
-                             #   front here; animate_orbital_solution READS it
+    out: outputs/orbital/orbital_pareto.png # Pareto-front figure
+    solutions: outputs/orbital/orbital_solutions.json # examples.orbital.run_planner WRITES the solved
+                             #   front here; examples.orbital.animate_solution READS it
                              #   (so the slow solve runs only once)
 
-  # Time-dependent mission value v_j(t) per node (examples.plot_mission_value).
+  # Time-dependent mission value v_j(t) per node (examples.orbital.plot_mission_value).
   #   Reward for ARRIVING at node j at time t.  Intermediate nodes: mixture of
   #   2-4 Gaussian value windows; destination: single peak at dest_peak_day.
   mission:
@@ -119,28 +119,28 @@ orbital:
     dest_sigma: 130          # destination peak width (days)
     peaks_range: [2, 4]      # #Gaussian peaks per intermediate node
     seed: 42                 # RNG seed (reproducible landscape)
-    out: mission_value.png
+    out: outputs/orbital/mission_value.png
 
-  # Replay the saved front (examples.animate_orbital_solution). Reads
-  # eecm.solutions -- run examples.run_orbital_planner first. The HTML always
+  # Replay the saved front (examples.orbital.animate_solution). Reads
+  # eecm.solutions -- run examples.orbital.run_planner first. The HTML always
   # contains EVERY front solution (dropdown); `select` only picks the MP4 one.
   simulation:
     select: max_value          # "max_visits" | "max_value" | "min_time" |
                                #   "min_dv" | <int k> (front index)
     frames: 240              # animation frames over the whole journey
     fps: 20                  # MP4 frame rate
-    html: orbital_solution.html   # interactive Three.js output
+    html: outputs/orbital/orbital_solution.html # interactive Three.js output
     mp4: null     # MP4 output (null to skip)
 
 # =====================================================================
-# SURVEILLANCE mission (td_route/surveillance.py)
+# SURVEILLANCE mission (td_route/surveillance/value.py)
 #   Mission value collected each time the satellite images point I:
 #     V_I = P_I * f(GSD_GM(x(t))) * g(eps_I,sun(t)) * h(t)
 #   f = GIQE NIIRS of the geometric-mean GSD; roll-only pointing (along-track
 #   look angle 0), so the off-nadir angle is purely cross-track.  Summed over
 #   every imaging pass, at most ONE target per orbital revolution.
-#     python -m examples.plot_niirs_heatmap       # NIIRS vs (x, altitude)
-#     python -m examples.plot_surveillance_value  # passes + total mission value
+#     python -m examples.surveillance.plot_niirs_heatmap       # NIIRS vs (x, altitude)
+#     python -m examples.surveillance.plot_surveillance_value  # passes + total mission value
 # ---------------------------------------------------------------------
 surveillance:
   epoch_utc: "2027-04-01T00:00:00Z"   # mission t=0 (quote it: YAML would
@@ -195,15 +195,15 @@ surveillance:
     - {name: T3, lat: 55.8, lon:  37.6, priority: 0.45, event: ["2027-04-14T00:00:00Z", "2027-04-26T00:00:00Z"]}
     - {name: T4, lat: 39.9, lon: 116.4, priority: 0.42, event: ["2027-04-05T00:00:00Z", "2027-04-18T00:00:00Z"]}
 
-  value:                     # examples/plot_surveillance_value.py
+  value:                     # examples/surveillance/plot_surveillance_value.py
     search_step_s: 60        # pass-search sampling step (roots refined by bisection)
-    passes_csv: surveillance_passes.csv
-    out: surveillance_value.png
+    passes_csv: outputs/surveillance/surveillance_passes.csv
+    out: outputs/surveillance/surveillance_value.png
 
   plot:
-    niirs_heatmap:           # examples/plot_niirs_heatmap.py
+    niirs_heatmap:           # examples/surveillance/plot_niirs_heatmap.py (shown, not saved)
       # Both null -> NIIRS only (time-independent).  Both set -> V_I = P*NIIRS*g*h
-      # for that target at that instant; saved as <out>_<target>_<YYYYMMDDTHHMM>.png
+      # for that target at that instant.
       time_utc: 2027-04-05T02:30:00Z         # e.g. "2027-04-05T02:30:00Z" (quoted)
       target: T1           # target name from `targets`, e.g. T1
       x_km: [-1500, 1500]    # cross-track ground distance range
@@ -214,7 +214,6 @@ surveillance:
       off_nadir_isolines_deg: [15, 30, 45, 60]
       niirs_clim: null       # colour range [lo, hi]; null = data range
       contour_step: 0.5      # NIIRS contour spacing
-      out: niirs_heatmap.png
 
 # ---------------------------------------------------------------------
 # Road-network structure (time-dependent travel-time / speed model, ref [11])
@@ -301,13 +300,13 @@ run:
   solver: nsga2           # nsga2 | exact | both
   w1: 0.8                 # fuzzy weight on the preference score (omega_f1)
   plot: true
-  plot_out: planner_result.png
+  plot_out: outputs/road/planner_result.png
 
 # ---------------------------------------------------------------------
 # plot_edge.py behaviour
 # ---------------------------------------------------------------------
 plot_edge:
-  out: edge_profile.png
+  out: outputs/road/edge_profile.png
 
 # ---------------------------------------------------------------------
 # Fixed 120-network benchmark (build_dataset.py)
@@ -333,7 +332,7 @@ plane:
   show_pareto: true         # overlay the NSGA-II Pareto front for the same O,D,t0
   show_cloud: true          # overlay a cloud of random feasible routes for context
   cloud_size: 80            # number of random routes in the cloud
-  out: route_plane.png      # used only if you uncomment the save line in the script
+  out: outputs/road/route_plane.png # used only if you uncomment the save line in the script
 
 simulation:
   route: [9, 1, 8, 4, 3, 2, 10]               # node order O..D (connected path); null = auto shortest O->D
@@ -342,9 +341,9 @@ simulation:
   free_flow_speed: null     # agent base speed override; null = the network's stored value
   # --- to animate a WAITING solution from the exact method: ---
   dep_times: null           # per-node departure times (enables waiting); null = no waiting
-  solution_json: eecm_net001_depart0700_pf1I.json       # load route + dep_times from an EECM solutions JSON, e.g.
+  solution_json: outputs/road/eecm_net001_depart0700_pf1I.json # load route + dep_times from an EECM solutions JSON, e.g.
                             #   eecm_net001_depart0700_solutions.json (overrides route/dep_times)
   solution_id: f1I         # which solution in that file, e.g. "sol3" (null = first)
-  out: simulation.mp4       # used only if you uncomment the save line in the script
+  out: outputs/road/simulation.mp4 # used only if you uncomment the save line in the script
   fps: 20
   frame_minutes: 0.5        # simulated minutes advanced per animation frame

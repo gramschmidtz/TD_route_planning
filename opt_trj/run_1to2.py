@@ -173,7 +173,7 @@ def main(argv=None):
                     help="skip the departure scan and start from this "
                          "(departure epoch, time of flight), e.g. "
                          "--seed 124.21370,46.13")
-    ap.add_argument("--json", type=str, default="opt_trj_1to2.json")
+    ap.add_argument("--json", type=str, default="outputs/opt_trj/opt_trj_1to2.json")
     ap.add_argument("--no-plots", action="store_true")
     args = ap.parse_args(argv)
 

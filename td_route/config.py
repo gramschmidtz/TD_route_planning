@@ -14,8 +14,8 @@ import os
 
 import yaml
 
-from .instance import generate_random_network, pick_od
-from .nsga2 import NSGA2Config
+from .road.instance import generate_random_network, pick_od
+from .road.nsga2 import NSGA2Config
 
 DEFAULT_CONFIG = os.path.join(os.getcwd(), "config.yaml")
 
@@ -82,13 +82,13 @@ def build_t0(cfg: dict, net):
 def load_dataset_network(cfg: dict):
     """Load the fixed dataset network selected by `network_number`.
     Returns (net, number_str). O/D are on net.G.graph['origin'/'destination']."""
-    from .dataset import load_network_json
+    from .road.dataset import load_network_json
     num = str(cfg.get("network_number", "001")).zfill(3)
     out_dir = cfg.get("dataset", {}).get("out_dir", "dataset")
     path = os.path.join(out_dir, "networks", f"net_{num}.json")
     if not os.path.isfile(path):
         raise SystemExit(f"network file not found: {path}\n"
-                         f"Run  python -m examples.build_dataset  first.")
+                         f"Run  python -m examples.road.build_dataset  first.")
     return load_network_json(path), num
 
 
