@@ -1,10 +1,10 @@
 """
 Build / serialise the fully connected orbital mission network.
 
-The instance is SIZED FOR THE IMPULSIVE CHASER (490 N, Isp 315.5 s, 400 kg wet /
-100 kg fuel), whose whole budget is
+The instance is SIZED FOR THE IMPULSIVE CHASER (490 N, Isp 315.5 s, 5000 kg wet /
+1500 kg fuel), whose whole budget is
 
-    dV = Isp*g0*ln(400/300) = 890 m/s
+    dV = Isp*g0*ln(5000/3500) = 1104 m/s
 
 Design arithmetic behind the numbers below (see td_route/orbital.py for the
 physics):
@@ -14,7 +14,7 @@ physics):
     route must depart inside J2 alignment windows (a 1-day grid leaves at most
     half a day's drift, i.e. ~0.1-0.5 deg -> 10-50 m/s per leg);
   * 8 nodes / 7 legs therefore fit comfortably: ~240 m/s of altitude change plus
-    ~150-300 m/s of residual plane change, well inside 890 m/s.
+    ~150-300 m/s of residual plane change, well inside 1104 m/s.
 Altitudes are all DISTINCT, so every pair precesses at a different J2 rate and
 its relative RAAN sweeps through zero with a finite synodic period (recurring
 windows).  raan0 DECREASES with altitude so those windows fall in the future
@@ -93,7 +93,7 @@ DESIGN_WINDOWS = [120.0, 260.0, 400.0, 540.0, 680.0, 820.0, 960.0]
 
 def build_orbital_network(orbits=None, inclination_deg=51.6,
                           thrust_N=490.0, isp_s=315.5,
-                          wet_mass_kg=400.0, fuel_mass_kg=100.0,
+                          wet_mass_kg=5000.0, fuel_mass_kg=1500.0,
                           ref_mass_kg=None,
                           t_start=0.0, t_end=1300.0, dt_days=1.0,
                           transit_drift=True, propulsion="impulsive",

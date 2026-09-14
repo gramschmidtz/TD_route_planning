@@ -50,8 +50,8 @@ def build_from_cfg(cfg: dict) -> OrbitalNetwork:
         inclination_deg=o.get("inclination_deg", 51.6),
         thrust_N=sc.get("thrust_N", 490.0),
         isp_s=sc.get("isp_s", 315.5),
-        wet_mass_kg=sc.get("wet_mass_kg", 400.0),
-        fuel_mass_kg=sc.get("fuel_mass_kg", 100.0),
+        wet_mass_kg=sc.get("wet_mass_kg", 5000.0),
+        fuel_mass_kg=sc.get("fuel_mass_kg", 1500.0),
         ref_mass_kg=sc.get("ref_mass_kg"),
         t_start=o.get("t_start", 0.0),
         t_end=o.get("t_end", 1300.0),
@@ -122,11 +122,16 @@ def plot_transfer(net: OrbitalNetwork, i, j, out="transfer_profile.png",
         gridspec_kw={"height_ratios": [3, 3, 1.5]})
 
     # --- Delta V ---
-    ax_dv.plot(ts, dv_dep, color="tab:orange", lw=1.0, ls="--", alpha=0.7,
-               label="departure-only (no transit drift)")
-    ax_dv.plot(ts, dv, color="tab:red", lw=1.6,
-               label="with transit drift (arrival match)")
-    ax_dv.legend(loc="upper right", fontsize=8, framealpha=0.9)
+    # In "impulsive" mode transfer() always matches the planes at ARRIVAL, so the
+    # departure-only curve is the same object -- plot it only for low_thrust.
+    if net.propulsion != "impulsive":
+        ax_dv.plot(ts, dv_dep, color="tab:orange", lw=1.0, ls="--", alpha=0.7,
+                   label="departure-only (no transit drift)")
+        ax_dv.plot(ts, dv, color="tab:red", lw=1.6,
+                   label="with transit drift (arrival match)")
+        ax_dv.legend(loc="upper right", fontsize=8, framealpha=0.9)
+    else:
+        ax_dv.plot(ts, dv, color="tab:red", lw=1.6)
     ax_dv.axhline(floor, color="0.5", ls="--", lw=0.9)
     ax_dv.text(ts[-1], floor, "  altitude-only floor", va="center",
                fontsize=8, color="0.4")
@@ -148,7 +153,8 @@ def plot_transfer(net: OrbitalNetwork, i, j, out="transfer_profile.png",
     # --- ToF ---
     ax_tof.plot(ts, tof, color="tab:blue", lw=1.6)
     tof_top = max(tof_feasible) if tof_feasible else tof_budget
-    ax_tof.set_ylim(0, min(tof_top * 1.15, tof_budget * 1.15))
+    ax_tof.set_ylim(0, tof_top * 1.15 if net.propulsion == "impulsive"
+                    else min(tof_top * 1.15, tof_budget * 1.15))
     ax_tof.set_ylabel("Time of Flight  (days)")
     ax_tof.grid(alpha=0.3)
 
@@ -157,8 +163,14 @@ def plot_transfer(net: OrbitalNetwork, i, j, out="transfer_profile.png",
     ax_om.axhline(0.0, color="0.5", lw=0.8)
     ax_om.set_ylabel("$\\Delta\\Omega$  (deg)")
     ax_om.set_xlabel("departure time  (days from epoch)")
-    ax_om.set_ylim(-185, 185)
-    ax_om.set_yticks([-180, -90, 0, 90, 180])
+    # a short horizon sweeps only a few degrees of dOmega -- autoscale then, so
+    # the drift that drives the whole dV curve is actually visible.
+    span = max(abs(min(draan)), abs(max(draan)))
+    if span < 60.0:
+        ax_om.set_ylim(-span * 1.3 - 1.0, span * 1.3 + 1.0)
+    else:
+        ax_om.set_ylim(-185, 185)
+        ax_om.set_yticks([-180, -90, 0, 90, 180])
     ax_om.grid(alpha=0.3)
 
     # mark alignment windows across all panels: departure-only (grey, unshifted)

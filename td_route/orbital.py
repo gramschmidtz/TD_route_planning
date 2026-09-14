@@ -115,8 +115,8 @@ class OrbitalNetwork:
     # --- spacecraft (chaser) -------------------------------------------------
     thrust_N: float = 490.0           # max thrust, N
     isp_s: float = 315.5              # specific impulse, s
-    wet_mass_kg: float = 400.0        # initial (wet) mass, kg
-    fuel_mass_kg: float = 100.0       # usable propellant, kg
+    wet_mass_kg: float = 5000.0       # initial (wet) mass, kg
+    fuel_mass_kg: float = 1500.0      # usable propellant, kg
     ref_mass_kg: float | None = None  # reference mass for ToF; None -> wet mass
     # "impulsive"  -> 2-impulse Hohmann + plane change, TRUE-ANOMALY matched
     # "low_thrust" -> continuous Edelbaum spiral (the legacy model)

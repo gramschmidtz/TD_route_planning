@@ -35,10 +35,10 @@ orbital:
   spacecraft:                # impulsive chaser
     thrust_N: 490            # max thrust (N)
     isp_s: 315.5             # specific impulse (s)
-    wet_mass_kg: 400         # initial mass
-    fuel_mass_kg: 100        # usable propellant -> dV budget = 890.1 m/s
-                             #   (= Isp*g0*ln(400/300); a 100 m/s burn = 12.7 kg
-                             #    in 80 s, so "impulsive" is well justified)
+    wet_mass_kg: 5000        # initial mass
+    fuel_mass_kg: 1500       # usable propellant -> dV budget = 1103.6 m/s
+                             #   (= Isp*g0*ln(5000/3500); a 100 m/s burn = 159 kg
+                             #    in 1005 s, so "impulsive" is still justified)
     ref_mass_kg: null        # reference mass; null = wet mass
 
   # 8 circular orbits: [altitude_km, raan0_deg, theta0_deg].
@@ -69,7 +69,7 @@ orbital:
   #     adjacent pair recycles in days), still a few dt steps.
 
   plot:                      # examples/plot_transfer.py
-    arc: [1,10]                # [i, j] to profile; null = origin -> destination
+    arc: [1,2]                 # [i, j] to profile; null = origin -> destination
     horizon_days: null       # x-axis span; null = ~2 synodic periods
     out: transfer_profile.png
 
