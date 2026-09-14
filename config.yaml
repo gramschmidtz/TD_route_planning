@@ -132,6 +132,90 @@ orbital:
     html: orbital_solution.html   # interactive Three.js output
     mp4: null     # MP4 output (null to skip)
 
+# =====================================================================
+# SURVEILLANCE mission (td_route/surveillance.py)
+#   Mission value collected each time the satellite images point I:
+#     V_I = P_I * f(GSD_GM(x(t))) * g(eps_I,sun(t)) * h(t)
+#   f = GIQE NIIRS of the geometric-mean GSD; roll-only pointing (along-track
+#   look angle 0), so the off-nadir angle is purely cross-track.  Summed over
+#   every imaging pass, at most ONE target per orbital revolution.
+#     python -m examples.plot_niirs_heatmap       # NIIRS vs (x, altitude)
+#     python -m examples.plot_surveillance_value  # passes + total mission value
+# ---------------------------------------------------------------------
+surveillance:
+  epoch_utc: "2027-04-01T00:00:00Z"   # mission t=0 (quote it: YAML would
+                             #   otherwise parse a bare timestamp itself)
+  duration_days: 30          # total mission time
+
+  orbit:                     # circular, secular J2
+    altitude_km: 500
+    inclination_deg: 97.4    # sun-synchronous at 500 km
+    ltan_hours: 22.5         # local time of ascending node (22:30 asc =
+                             #   10:30 desc: daylight passes are descending)
+    raan0_deg: null          # explicit initial RAAN; null = from ltan_hours
+    arglat0_deg: 0.0         # argument of latitude at epoch (0 = asc node)
+
+  spacecraft:
+    wet_mass_kg: 5000
+    fuel_mass_kg: 1500
+    thrust_N: 490
+    isp_s: 315.5
+
+  sensor:                    # GeoEye-1 class EO sensor
+    beta_rad: 6.02e-7        # IFOV (0.41 m GSD @ 681 km)
+    max_off_nadir_deg: 60    # cross-track roll limit; null = horizon only
+    earth_model: flat        # flat (slide 8: x = h tan eta) | spherical
+
+  giqe:                      # GIQE-4, Leachtenauer et al. 1997 (GSD in INCHES)
+    # NIIRS = c0 - a log10(GSD) + b log10(RER) - c_h H - c_snr G/SNR
+    c0: 10.251
+    a: [3.32, 3.16]          # [RER >= rer_threshold, RER < rer_threshold]
+    b: [1.559, 2.817]
+    rer_threshold: 0.9
+    c_snr: 0.344
+    c_h: 0.656
+    rer: 0.565               # sensor parameters (Ali et al. 2023)
+    G: 1.0
+    snr: 17.0
+    H: 0.749
+
+  illumination:              # g(eps) = 1/(1+e^{-k(eps-eps_low)}) * 1/(1+e^{-k(eps_high-eps)})
+    eps_low_deg: 15
+    eps_high_deg: 60
+    k: 0.3
+    zero_below_horizon: true # g = 0 when eps < 0 (night)
+
+  # Surveillance points.  lon east-positive.  priority = P_I.
+  #   event: [t_A, t_B] quoted UTC ISO -> h(t) = u(t - t_A) - u(t - t_B);
+  #   null on either side = open-ended.  Windows are staggered and overlap so
+  #   the one-target-per-revolution rule actually has to choose.
+  targets:
+    - {name: T1, lat: 39.0, lon: 125.8, priority: 0.50, event: ["2027-04-03T00:00:00Z", "2027-04-13T00:00:00Z"]}
+    - {name: T2, lat: 35.7, lon:  51.4, priority: 0.55, event: ["2027-04-08T00:00:00Z", "2027-04-20T00:00:00Z"]}
+    - {name: T3, lat: 55.8, lon:  37.6, priority: 0.45, event: ["2027-04-14T00:00:00Z", "2027-04-26T00:00:00Z"]}
+    - {name: T4, lat: 39.9, lon: 116.4, priority: 0.42, event: ["2027-04-05T00:00:00Z", "2027-04-18T00:00:00Z"]}
+
+  value:                     # examples/plot_surveillance_value.py
+    search_step_s: 60        # pass-search sampling step (roots refined by bisection)
+    passes_csv: surveillance_passes.csv
+    out: surveillance_value.png
+
+  plot:
+    niirs_heatmap:           # examples/plot_niirs_heatmap.py
+      # Both null -> NIIRS only (time-independent).  Both set -> V_I = P*NIIRS*g*h
+      # for that target at that instant; saved as <out>_<target>_<YYYYMMDDTHHMM>.png
+      time_utc: 2027-04-05T02:30:00Z         # e.g. "2027-04-05T02:30:00Z" (quoted)
+      target: T1           # target name from `targets`, e.g. T1
+      x_km: [-1500, 1500]    # cross-track ground distance range
+      alt_km: [300, 1000]    # altitude range
+      nx: 601
+      ny: 351
+      slice_alt_km: 500      # right panel slice
+      off_nadir_isolines_deg: [15, 30, 45, 60]
+      niirs_clim: null       # colour range [lo, hi]; null = data range
+      contour_step: 0.5      # NIIRS contour spacing
+      out: niirs_heatmap.png
+
 # ---------------------------------------------------------------------
 # Road-network structure (time-dependent travel-time / speed model, ref [11])
 # ---------------------------------------------------------------------
