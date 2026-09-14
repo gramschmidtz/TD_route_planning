@@ -183,7 +183,7 @@ the cost `J = sum |dv_k|` (proof in `costate.lam_m_profile`), so
 `plots.plot_primer_stages(res)` draws one figure per stage of the
 necessary-condition loop; `plots.plot_primer(res, traj=..., ana=...)` draws any
 single one. Numeric results still go to `--json` (default
-`opt_trj_1to2.json`).
+`outputs/opt_trj/opt_trj_1to2.json`).
 
 ## Three things that bite, and are worth knowing before running another pair
 
