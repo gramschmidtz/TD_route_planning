@@ -110,6 +110,7 @@ class TimeExpanded:
         net, O, D = self.net, self.O, self.D
         feas = getattr(net, "arc_feasible", None)     # see _build
         costf = getattr(net, "arc_cost", None)        # optional dv coefficient
+        wfeas = getattr(net, "wait_feasible", None)   # optional wait hook (P6)
         H = self.t_horizon
         seen = {(O, self.t0)}
         queue = [(O, self.t0)]
@@ -140,7 +141,10 @@ class TimeExpanded:
             # wait arc (i, t) -> (i, t+1). Intermediate nodes always; the origin
             # only when origin_wait is set (then it may sit on its orbit waiting
             # for a window before its single departure).
-            if (self.origin_wait or i != O) and t + 1 <= H:
+            # optional net.wait_feasible(v, t) hook: a net may forbid waiting at
+            # a node (e.g. a re-entered debris); default = always allowed
+            if (self.origin_wait or i != O) and t + 1 <= H and (
+                    wfeas is None or wfeas(i, t)):
                 self.waits.add((i, t))
                 self.time_nodes.add((i, t + 1))
                 if (i, t + 1) not in seen:

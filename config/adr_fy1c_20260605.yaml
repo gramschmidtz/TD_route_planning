@@ -1,0 +1,74 @@
+# =====================================================================
+# ADR (active debris removal) — FY-1C debris, time-varying removal score
+# + time-varying 2-impulse transfer dV, solved with the EXISTING exact
+# TD-graph MILP (td_route/eecm) as an epsilon-constraint sweep.
+#   python -m adr_data.run_pareto                         # this file
+#   python -m adr_data.run_pareto --config other.yaml
+#   python -m pytest tests/test_adr_data.py
+# Dataset epoch: 2026-06-05 00:00 UTC (day 0).  All "day" values are days
+# from that epoch.  Every numeric parameter of the run lives here.
+# =====================================================================
+
+dataset:
+  root: external/adr_time_varying_benefit/adr   # unzipped adr_time_varying_benefit.zip
+  out_dir: out_0605          # ONLY the *_0605 folders are used (data/, out/ = 2026-11-07, stale)
+  data_dir: data_0605
+  epoch_utc: "2026-06-05T00:00:00Z"
+  dv_table: combined         # combined (default) | split  -> edge_dv_<table>.npy
+  score_file: score_daily.csv
+  score_norm_B0: 1.9527e-6   # max_j B_j(0) (D01) -- documentation / check only
+
+maneuver:
+  tau_s_days: 0              # stay at a debris before it counts as removed (sensitivity
+                             #   parameter; default 0)
+  tof_phys_days: 0.07        # physical transfer time (<= 1.7 h). Graph tof of a
+                             #   debris->debris arc = max(1, ceil((tof_phys + tau_s)/dt))
+                             #   (A2: graph arrival >= physical completion); the score is
+                             #   evaluated on that GRAPH arrival day (P1)
+  phasing_dv_mps: 0.0        # phasing dV per transfer (0 = absorbed by coasting).
+                             #   Placeholder for Choi et al. (2024) eqs. (22)-(23):
+                             #   adr_data.maneuver.phasing_dv()
+  min_transfer_steps: 1      # lower bound of the graph tof (Q1: >= 1, otherwise
+                             #   zero-time 2-cycles satisfy the flow balance)
+
+servicer:                    # reference satellite A
+  m0_kg: 500
+  m_dry_kg: 250              # 250 kg MON/MMH propellant
+  thrust_N: 420
+  isp_s: 318
+  g0: 9.80665
+  dv_margin_mps: 0           # subtracted from Isp*g0*ln(m0/m_dry) = 2161.6 m/s
+
+mission:
+  dt_days: 1                 # time grid (coarse grid: values of the grid day are used)
+  horizon_days: 1096         # mission window day 0..1095 (3 yr)
+  launch_window_days: [0, 180]   # launch day t_L (decision variable) + first target
+                                 #   (decision variable); first rendezvous dV = 0
+
+pareto:
+  eps_step_mps: 50           # epsilon grid 0, 50, ..., plus dV_max itself
+  eps_extra_mps: []          # additional epsilons to solve (m/s)
+  lexicographic: true        # 2nd solve: min sum dV s.t. score >= score*  (removes
+                             #   weakly-dominated points)
+  prune_dv_above_eps: true   # arcs with dV > min(eps, dV_max) are never created
+                             #   (lossless: such an arc can never be in a feasible plan)
+  mode: score_exact          # score_exact (min dV s.t. sum v' >= eps, eps <- s_k + 1) |
+                             #   dv_exact (max v s.t. dV <= eps, eps <- dV_k - delta) |
+                             #   grid (old fixed eps_step grid, approximate)
+  score_scale: 10            # v' = round(K * score) (0.1-point units); null = raw score
+  delta_mps: 0.001           # dv_exact step
+  mip_gap: 0                 # relative AND absolute MIP gap (P3: exact)
+  integrality: 0             # CPLEX integrality tolerance (P5)
+  feasibility: 1.0e-9        # CPLEX primal feasibility tolerance (default 1e-6 let
+                             #   sum dV exceed the cap by ~1e-3 m/s at dV ~ 1500)
+  threads: null              # null = CPLEX automatic
+  solver: cplex              # cplex | cbc   (cplex_path below; falls back to cbc if missing)
+  cplex_path: "C:/Program Files/IBM/ILOG/CPLEX_Studio222/cplex/bin/x64_win64/cplex.exe"
+  time_limit: 1800           # per-solve limit (s); incumbent kept, optimal=false + mip_gap
+
+output:
+  exact_dir: results/pareto_fy1c_20260605_K10   # score_exact / dv_exact front (+ checkpoint)
+  csv: results/pareto_adr_fy1c_20260605.csv
+  json: results/pareto_adr_fy1c_20260605.json
+  fig_front: results/pareto_adr_fy1c_20260605.png
+  fig_timeline: results/timelines_adr_fy1c_20260605.png

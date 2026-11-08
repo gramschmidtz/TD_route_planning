@@ -1,0 +1,10 @@
+# method-comparison benchmark (bench/) -- versions used on the main machine
+pulp==3.3.2          # CPLEX_CMD status handling is version dependent: keep this one
+numpy==1.26.0
+networkx>=3.0
+pyyaml>=6.0
+matplotlib>=3.5
+pymoo==0.6.1.3       # M3 NSGA-II
+psutil>=5.9          # peak memory sampling
+pytest>=7            # optional: python -m pytest tests/test_adr_data.py
+# plus IBM ILOG CPLEX 22.x (cplex / cplex.exe, set CPLEX_PATH) -- required, no CBC fallback

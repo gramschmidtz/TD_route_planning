@@ -1,0 +1,425 @@
+{
+ "points": [
+  {
+   "dv": 0.0,
+   "vs": 854,
+   "score": 85.4,
+   "optimal": true
+  },
+  {
+   "dv": 136.821844,
+   "vs": 1287,
+   "score": 128.7,
+   "optimal": true
+  },
+  {
+   "dv": 142.664799,
+   "vs": 1288,
+   "score": 128.8,
+   "optimal": true
+  },
+  {
+   "dv": 185.192997,
+   "vs": 1289,
+   "score": 128.9,
+   "optimal": true
+  },
+  {
+   "dv": 222.669711,
+   "vs": 1360,
+   "score": 136.0,
+   "optimal": true
+  },
+  {
+   "dv": 254.81138,
+   "vs": 1362,
+   "score": 136.2,
+   "optimal": true
+  },
+  {
+   "dv": 271.125629,
+   "vs": 1363,
+   "score": 136.3,
+   "optimal": true
+  },
+  {
+   "dv": 285.036388,
+   "vs": 1974,
+   "score": 197.4,
+   "optimal": true
+  },
+  {
+   "dv": 286.973808,
+   "vs": 1975,
+   "score": 197.5,
+   "optimal": true
+  },
+  {
+   "dv": 298.902454,
+   "vs": 1976,
+   "score": 197.6,
+   "optimal": true
+  },
+  {
+   "dv": 329.019223,
+   "vs": 1977,
+   "score": 197.7,
+   "optimal": true
+  },
+  {
+   "dv": 355.495237,
+   "vs": 1978,
+   "score": 197.8,
+   "optimal": true
+  },
+  {
+   "dv": 369.427476,
+   "vs": 1979,
+   "score": 197.9,
+   "optimal": true
+  },
+  {
+   "dv": 395.808927,
+   "vs": 1980,
+   "score": 198.0,
+   "optimal": true
+  },
+  {
+   "dv": 425.925697,
+   "vs": 1981,
+   "score": 198.1,
+   "optimal": true
+  },
+  {
+   "dv": 452.40171,
+   "vs": 1982,
+   "score": 198.2,
+   "optimal": true
+  },
+  {
+   "dv": 457.977779,
+   "vs": 2138,
+   "score": 213.8,
+   "optimal": true
+  },
+  {
+   "dv": 467.845129,
+   "vs": 2139,
+   "score": 213.9,
+   "optimal": true
+  },
+  {
+   "dv": 479.474164,
+   "vs": 2140,
+   "score": 214.0,
+   "optimal": true
+  },
+  {
+   "dv": 494.801754,
+   "vs": 2141,
+   "score": 214.1,
+   "optimal": true
+  },
+  {
+   "dv": 513.185922,
+   "vs": 2142,
+   "score": 214.2,
+   "optimal": true
+  },
+  {
+   "dv": 520.344457,
+   "vs": 2536,
+   "score": 253.6,
+   "optimal": true
+  },
+  {
+   "dv": 522.281876,
+   "vs": 2537,
+   "score": 253.7,
+   "optimal": true
+  },
+  {
+   "dv": 534.210522,
+   "vs": 2538,
+   "score": 253.8,
+   "optimal": true
+  },
+  {
+   "dv": 555.706907,
+   "vs": 2539,
+   "score": 253.9,
+   "optimal": true
+  },
+  {
+   "dv": 585.823676,
+   "vs": 2540,
+   "score": 254.0,
+   "optimal": true
+  },
+  {
+   "dv": 594.799623,
+   "vs": 2571,
+   "score": 257.1,
+   "optimal": true
+  },
+  {
+   "dv": 600.642579,
+   "vs": 2572,
+   "score": 257.2,
+   "optimal": true
+  },
+  {
+   "dv": 610.509928,
+   "vs": 2573,
+   "score": 257.3,
+   "optimal": true
+  },
+  {
+   "dv": 622.138963,
+   "vs": 2574,
+   "score": 257.4,
+   "optimal": true
+  },
+  {
+   "dv": 637.466553,
+   "vs": 2575,
+   "score": 257.5,
+   "optimal": true
+  },
+  {
+   "dv": 655.850721,
+   "vs": 2576,
+   "score": 257.6,
+   "optimal": true
+  },
+  {
+   "dv": 685.922471,
+   "vs": 2577,
+   "score": 257.7,
+   "optimal": true
+  },
+  {
+   "dv": 704.306639,
+   "vs": 2578,
+   "score": 257.8,
+   "optimal": true
+  },
+  {
+   "dv": 720.046041,
+   "vs": 2579,
+   "score": 257.9,
+   "optimal": true
+  },
+  {
+   "dv": 731.675076,
+   "vs": 2580,
+   "score": 258.0,
+   "optimal": true
+  },
+  {
+   "dv": 747.002666,
+   "vs": 2581,
+   "score": 258.1,
+   "optimal": true
+  },
+  {
+   "dv": 765.386834,
+   "vs": 2582,
+   "score": 258.2,
+   "optimal": true
+  },
+  {
+   "dv": 788.573899,
+   "vs": 2583,
+   "score": 258.3,
+   "optimal": true
+  },
+  {
+   "dv": 812.735475,
+   "vs": 2584,
+   "score": 258.4,
+   "optimal": true
+  },
+  {
+   "dv": 837.687311,
+   "vs": 2585,
+   "score": 258.5,
+   "optimal": true
+  },
+  {
+   "dv": 863.286229,
+   "vs": 2586,
+   "score": 258.6,
+   "optimal": true
+  },
+  {
+   "dv": 889.416996,
+   "vs": 2587,
+   "score": 258.7,
+   "optimal": true
+  },
+  {
+   "dv": 931.945194,
+   "vs": 2588,
+   "score": 258.8,
+   "optimal": true
+  },
+  {
+   "dv": 985.461564,
+   "vs": 2589,
+   "score": 258.9,
+   "optimal": true
+  },
+  {
+   "dv": 1079.090857,
+   "vs": 2590,
+   "score": 259.0,
+   "optimal": true
+  },
+  {
+   "dv": 1161.113519,
+   "vs": 2591,
+   "score": 259.1,
+   "optimal": true
+  },
+  {
+   "dv": 1218.681846,
+   "vs": 2592,
+   "score": 259.2,
+   "optimal": true
+  },
+  {
+   "dv": 1277.716337,
+   "vs": 2593,
+   "score": 259.3,
+   "optimal": true
+  },
+  {
+   "dv": 1441.998151,
+   "vs": 2594,
+   "score": 259.4,
+   "optimal": true
+  },
+  {
+   "dv": 1499.566477,
+   "vs": 2595,
+   "score": 259.5,
+   "optimal": true
+  },
+  {
+   "dv": 1558.600968,
+   "vs": 2596,
+   "score": 259.6,
+   "optimal": true
+  },
+  {
+   "dv": 1645.004709,
+   "vs": 2597,
+   "score": 259.7,
+   "optimal": true
+  },
+  {
+   "dv": 1760.925335,
+   "vs": 2598,
+   "score": 259.8,
+   "optimal": true
+  },
+  {
+   "dv": 1918.432509,
+   "vs": 2599,
+   "score": 259.9,
+   "optimal": true
+  },
+  {
+   "dv": 1933.7601,
+   "vs": 2600,
+   "score": 260.0,
+   "optimal": true
+  },
+  {
+   "dv": 1944.28064,
+   "vs": 2602,
+   "score": 260.2,
+   "optimal": true
+  },
+  {
+   "dv": 1947.529398,
+   "vs": 2603,
+   "score": 260.3,
+   "optimal": true
+  },
+  {
+   "dv": 1954.506686,
+   "vs": 2604,
+   "score": 260.4,
+   "optimal": true
+  },
+  {
+   "dv": 1981.914019,
+   "vs": 2605,
+   "score": 260.5,
+   "optimal": true
+  },
+  {
+   "dv": 2002.962604,
+   "vs": 2606,
+   "score": 260.6,
+   "optimal": true
+  },
+  {
+   "dv": 2021.579967,
+   "vs": 2607,
+   "score": 260.7,
+   "optimal": true
+  },
+  {
+   "dv": 2042.061747,
+   "vs": 2608,
+   "score": 260.8,
+   "optimal": true
+  },
+  {
+   "dv": 2057.06551,
+   "vs": 2609,
+   "score": 260.9,
+   "optimal": true
+  },
+  {
+   "dv": 2064.042799,
+   "vs": 2610,
+   "score": 261.0,
+   "optimal": true
+  },
+  {
+   "dv": 2087.229864,
+   "vs": 2611,
+   "score": 261.1,
+   "optimal": true
+  },
+  {
+   "dv": 2111.39144,
+   "vs": 2612,
+   "score": 261.2,
+   "optimal": true
+  },
+  {
+   "dv": 2136.343276,
+   "vs": 2613,
+   "score": 261.3,
+   "optimal": true
+  },
+  {
+   "dv": 2161.460083,
+   "vs": 2614,
+   "score": 261.4,
+   "optimal": true
+  }
+ ],
+ "wall_s": 287.2527630329132,
+ "n_solves": 139,
+ "peak_mb": 127.78515625,
+ "all_optimal": true,
+ "timeout": false,
+ "instance": "n4_s1",
+ "method": "M0"
+}

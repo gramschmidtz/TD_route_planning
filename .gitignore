@@ -82,3 +82,10 @@ opt_trj/_cache/
 # results. To slim the repo you may exclude the (regenerable) images instead;
 # uncomment the next line and rebuild visuals with `python -m examples.build_dataset`:
 # dataset/png/
+
+# ---------------------------------------------------------------------------
+# Method-comparison benchmark: only the per-method front JSON is exchanged
+# between machines (bench/REMOTE_RUN.md); metrics/figures are regenerated.
+# ---------------------------------------------------------------------------
+/bench/out/*
+!/bench/out/fronts/

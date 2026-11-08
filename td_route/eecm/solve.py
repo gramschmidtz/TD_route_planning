@@ -11,6 +11,8 @@ Objective convention:  f1 = preference (max),  f2 = travel time (min).
 from __future__ import annotations
 
 import os
+import re
+import tempfile
 
 import pulp
 
@@ -21,36 +23,102 @@ from .time_expanded import TimeExpanded
 # --------------------------------------------------------------------------- #
 # Solver selection (CBC by default; CPLEX via config exact.solver/cplex_path)
 # --------------------------------------------------------------------------- #
-_SOLVER_CFG = {"solver": "cbc", "cplex_path": None}
+_SOLVER_CFG = {"solver": "cbc", "cplex_path": None, "mip_gap": None,
+               "threads": None, "integrality": None}
+_LAST = {"log": None, "text": ""}     # per-solve CPLEX log (final MIP gap, diagnostics)
 
 
 def configure_solver(exact_cfg=None):
     """Set the MILP solver from a config `exact` dict: solver = 'cbc' | 'cplex',
-    cplex_path = path to cplex.exe (or its folder). Call once at start-up."""
+    cplex_path = path to cplex.exe (or its folder). Call once at start-up.
+    Optional exactness controls (None = solver default, the old behaviour):
+      mip_gap     : relative AND absolute MIP gap (0 = prove optimality exactly)
+      threads     : solver threads
+      integrality : CPLEX integrality tolerance (0 = no fractional x accepted)"""
     exact_cfg = exact_cfg or {}
     _SOLVER_CFG["solver"] = str(exact_cfg.get("solver") or "cbc").lower()
     _SOLVER_CFG["cplex_path"] = exact_cfg.get("cplex_path")
+    for k in ("mip_gap", "threads", "integrality", "feasibility"):
+        _SOLVER_CFG[k] = exact_cfg.get(k)
 
 
 def _build_solver(time_limit, msg):
+    gap = _SOLVER_CFG.get("mip_gap")
+    kw = {}
+    if gap is not None:
+        kw.update(gapRel=float(gap), gapAbs=float(gap))
+    if _SOLVER_CFG.get("threads"):
+        kw["threads"] = int(_SOLVER_CFG["threads"])
     if _SOLVER_CFG["solver"] == "cplex":
         path = _SOLVER_CFG["cplex_path"]
         if path and os.path.isdir(path):          # folder given -> append exe
             path = os.path.join(path, "cplex.exe")
-        return pulp.CPLEX_CMD(path=path, msg=msg, timeLimit=time_limit)
-    return pulp.PULP_CBC_CMD(msg=msg, timeLimit=time_limit)
+        opts = []
+        if _SOLVER_CFG.get("integrality") is not None:
+            opts.append(f"set mip tolerances integrality {_SOLVER_CFG['integrality']}")
+        if _SOLVER_CFG.get("feasibility") is not None:     # primal feasibility (eprhs)
+            opts.append(f"set simplex tolerances feasibility {_SOLVER_CFG['feasibility']}")
+        # own log file per solve: PuLP deletes "cplex.log", and the log is the
+        # only place CPLEX_CMD reports the final MIP gap of a time-limited run
+        fd, log = tempfile.mkstemp(prefix="cplex_", suffix=".log")
+        os.close(fd)
+        _LAST["log"] = log
+        return pulp.CPLEX_CMD(path=path, msg=msg, timeLimit=time_limit,
+                              options=opts, logPath=log, **kw)
+    _LAST["log"] = None
+    return pulp.PULP_CBC_CMD(msg=msg, timeLimit=time_limit, **kw)
+
+
+def _cplex_log_gap():
+    """(proven_optimal_in_log, relative MIP gap) parsed from the last CPLEX log."""
+    log = _LAST.get("log")
+    if not log or not os.path.exists(log):
+        return None, None
+    try:
+        with open(log, encoding="utf-8", errors="replace") as f:
+            txt = f.read()
+    finally:
+        try:
+            os.remove(log)
+        except OSError:
+            pass
+        _LAST["log"] = None
+    _LAST["text"] = txt
+    m = re.findall(r"gap = [-+0-9.eE]+, ([-+0-9.eE]+)%", txt)
+    gap = float(m[-1]) / 100.0 if m else None
+    opt = "Integer optimal solution" in txt or "integer optimal, tolerance" in txt
+    if opt and gap is None:
+        gap = 0.0
+    return opt, gap
+
+
+def last_solve_tolerance_failure() -> bool:
+    """True if the last CPLEX_CMD run found a MIP incumbent but PuLP's follow-up
+    fixed-integer LP rejected it (constraint violated beyond the LP tolerance) --
+    PuLP then reports 'Infeasible' although the MIP is feasible."""
+    t = _LAST.get("text") or ""
+    return ("MIP - Integer optimal" in t or "integer feasible" in t) and         "No solution exists" in t
 
 
 def _finish(prob, te, sol):
     """Decide the return value after solving. Accepts a proven-optimal solution
     OR a time-limited INCUMBENT (a feasible route reaching D that the solver
     found but could not prove optimal). sol.meta['optimal'] records which it is.
-    Returns None only when no feasible O..D solution was found."""
+    Returns None only when no feasible O..D solution was found.
+
+    NB PuLP's CPLEX_CMD maps CPLEX 107 'time limit, integer feasible' (and
+    104/105/109/113) to LpStatusOptimal; only prob.sol_status distinguishes a
+    proven optimum (LpSolutionOptimal) from an incumbent (IntegerFeasible)."""
+    _LAST["text"] = ""
+    log_opt, log_gap = _cplex_log_gap()
     if pulp.LpStatus[prob.status] == "Infeasible":
         return None
     if len(sol.route) < 2 or sol.route[-1] != te.D:
         return None                                # no incumbent found
-    sol.meta["optimal"] = (pulp.LpStatus[prob.status] == "Optimal")
+    opt = (pulp.LpStatus[prob.status] == "Optimal"
+           and prob.sol_status == pulp.LpSolutionOptimal)
+    sol.meta["optimal"] = opt
+    sol.meta["mip_gap"] = 0.0 if (opt and log_gap is None) else log_gap
     return sol
 
 
