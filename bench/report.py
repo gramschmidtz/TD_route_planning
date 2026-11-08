@@ -178,7 +178,7 @@ def main():
         cross.setdefault(name, {})["m0_unproven"] = m0_unproven(name)
         cross[name]["n_supported"] = sum(sup)
         cross[name]["n_nonsupported"] = len(sup) - sum(sup)
-        if "M4" in D[name]:
+        if "M4" in D[name] and not D[name]["M4"].get("skipped"):   # skip placeholder files
             r4 = D[name]["M4"]
             a, b = match(P, r4["points"]), match(r4["points"], P)
             cross[name].update({"m0_points": len(P), "m4_points": len(r4["points"]),
