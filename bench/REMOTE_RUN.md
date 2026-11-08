@@ -8,6 +8,10 @@
 |---|---|
 | 이 컴퓨터 | n6_s2, n6_s1, n5_s2, n5_s1, n5_s0, n4_s2 (`bench/instances.json`) |
 
+> **변경 (2026-11-09): DP(M4)는 비교에서 뺐다.** 이미 도우미를 M4 포함으로 띄웠다면 도우미 2개만 멈추고 `git pull` 후 아래 명령으로 다시 띄운다.
+> 인스턴스 프로세스는 M4 를 돌리지 않으므로 그대로 둬도 된다. 다시 띄워도 M0·M5 는 체크포인트에서 이어 푼다.
+> 이미 생긴 `*__M4.json` 은 지우지 않아도 된다(보고서에서 제외).
+
 ## 1. 준비 (한 번)
 
 1. **Python 3.10+**
@@ -30,8 +34,8 @@
 
 ## 2. 기계 보정 (먼저, 약 5–10분)
 
-메인 PC 와 시간을 비교할 수 있도록 n4_s0 의 M0·M4 를 이 컴퓨터에서 한 번 더 푼다.
-결과는 `bench/out/fronts/n4_s0__CALIB_<호스트>_M0.json` 등으로 저장된다.
+메인 PC 와 시간을 비교할 수 있도록 n4_s0 의 M0 를 이 컴퓨터에서 한 번 더 푼다.
+결과는 `bench/out/fronts/n4_s0__CALIB_<호스트>_M0.json` 으로 저장된다.
 ```
 python -W ignore -m bench.run --calib
 ```
@@ -45,7 +49,7 @@ python -W ignore -m bench.run --calib
 
 **8개 프로세스 = 물리 코어 8개.** 인스턴스 프로세스 6개 + 도우미 2개로 나눈다.
 - **인스턴스 프로세스:** M0, M5, M1, M2, M3gen, M3time 을 시드 0–4 로 계산한다.
-- **도우미:** M4, M3gen, M3time 을 시드 5–9 로 계산한다. M3time 은 그 인스턴스의 M0 가 끝날 때까지 기다린다.
+- **도우미:** M3gen, M3time 을 시드 5–9 로 계산한다. M3time 은 그 인스턴스의 M0 가 끝날 때까지 기다린다.
 
 두 쪽이 맡는 방법·시드가 겹치지 않아 같은 파일을 두 번 계산하지 않는다. 각 프로세스는 1스레드라서 시간 조건은 그대로다.
 
@@ -54,8 +58,8 @@ PowerShell (같은 창에서 `$env:CPLEX_PATH` 설정 후, **한 번만** 실행
 foreach ($i in "n6_s2","n6_s1","n5_s2","n5_s1","n5_s0","n4_s2") {
   Start-Process -NoNewWindow -FilePath python -ArgumentList "-W ignore -m bench.run --inst $i --methods M0 M5 M1 M2 M3gen M3time --seeds 0 1 2 3 4" -RedirectStandardOutput "bench_remote_$i.log" -RedirectStandardError "bench_remote_$i.err"
 }
-Start-Process -NoNewWindow -FilePath python -ArgumentList "-W ignore -m bench.run --helper --inst n6_s2 n5_s0 n4_s2 --methods M4 M3gen M3time --seeds 5 6 7 8 9" -RedirectStandardOutput "bench_remote_helperA.log" -RedirectStandardError "bench_remote_helperA.err"
-Start-Process -NoNewWindow -FilePath python -ArgumentList "-W ignore -m bench.run --helper --inst n6_s1 n5_s2 n5_s1 --methods M4 M3gen M3time --seeds 5 6 7 8 9" -RedirectStandardOutput "bench_remote_helperB.log" -RedirectStandardError "bench_remote_helperB.err"
+Start-Process -NoNewWindow -FilePath python -ArgumentList "-W ignore -m bench.run --helper --inst n6_s2 n5_s0 n4_s2 --methods M3gen M3time --seeds 5 6 7 8 9" -RedirectStandardOutput "bench_remote_helperA.log" -RedirectStandardError "bench_remote_helperA.err"
+Start-Process -NoNewWindow -FilePath python -ArgumentList "-W ignore -m bench.run --helper --inst n6_s1 n5_s2 n5_s1 --methods M3gen M3time --seeds 5 6 7 8 9" -RedirectStandardOutput "bench_remote_helperB.log" -RedirectStandardError "bench_remote_helperB.err"
 ```
 실행 중인 bench 프로세스 수 확인 (8 이어야 한다):
 ```
@@ -67,7 +71,6 @@ Start-Process -NoNewWindow -FilePath python -ArgumentList "-W ignore -m bench.ru
 | 방법 | 내용 |
 |---|---|
 | M0 | 참 프론트, 점수 축 exact ε. 수십 분–수 시간 |
-| M4 | DP, 2시간 제한 |
 | M5 | 대기 없는 모델 |
 | M3gen | NSGA-II pop 200 × 250세대, 시드 10개. 각 수 초 |
 | M1 | 가중합, λ 11개와 101개 |

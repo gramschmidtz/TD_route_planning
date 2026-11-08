@@ -1,0 +1,525 @@
+{
+ "points": [
+  {
+   "dv": 0.0,
+   "vs": 1000,
+   "score": 100.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 161.947866,
+   "vs": 1598,
+   "score": 159.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 164.542522,
+   "vs": 1599,
+   "score": 159.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 170.349155,
+   "vs": 1600,
+   "score": 160.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 179.017918,
+   "vs": 1601,
+   "score": 160.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 190.115483,
+   "vs": 1602,
+   "score": 160.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 203.203255,
+   "vs": 1603,
+   "score": 160.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 217.888819,
+   "vs": 1604,
+   "score": 160.4,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 233.845821,
+   "vs": 1605,
+   "score": 160.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 250.809955,
+   "vs": 1606,
+   "score": 160.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 268.576555,
+   "vs": 1607,
+   "score": 160.7,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 286.985729,
+   "vs": 1608,
+   "score": 160.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 305.913558,
+   "vs": 1610,
+   "score": 161.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 325.263514,
+   "vs": 1612,
+   "score": 161.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 344.962436,
+   "vs": 1613,
+   "score": 161.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 364.946155,
+   "vs": 1615,
+   "score": 161.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 385.170751,
+   "vs": 1618,
+   "score": 161.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 405.595922,
+   "vs": 1619,
+   "score": 161.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 446.936665,
+   "vs": 1620,
+   "score": 162.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 594.86584,
+   "vs": 1621,
+   "score": 162.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 616.261633,
+   "vs": 1622,
+   "score": 162.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 659.178611,
+   "vs": 1624,
+   "score": 162.4,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 680.693449,
+   "vs": 1625,
+   "score": 162.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 702.239941,
+   "vs": 1626,
+   "score": 162.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 723.813648,
+   "vs": 1628,
+   "score": 162.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 745.414247,
+   "vs": 1629,
+   "score": 162.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 767.036682,
+   "vs": 1630,
+   "score": 163.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 788.682492,
+   "vs": 1632,
+   "score": 163.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 810.344653,
+   "vs": 1633,
+   "score": 163.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 832.025118,
+   "vs": 1634,
+   "score": 163.4,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 853.721008,
+   "vs": 1635,
+   "score": 163.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 875.430876,
+   "vs": 1636,
+   "score": 163.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 897.154671,
+   "vs": 1638,
+   "score": 163.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 918.888638,
+   "vs": 1639,
+   "score": 163.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 940.632989,
+   "vs": 1640,
+   "score": 164.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1223.905166,
+   "vs": 1641,
+   "score": 164.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1289.355221,
+   "vs": 1642,
+   "score": 164.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1311.17331,
+   "vs": 1643,
+   "score": 164.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1354.81181,
+   "vs": 1644,
+   "score": 164.4,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1376.631647,
+   "vs": 1645,
+   "score": 164.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1398.451142,
+   "vs": 1646,
+   "score": 164.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1420.270058,
+   "vs": 1647,
+   "score": 164.7,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1442.086875,
+   "vs": 1648,
+   "score": 164.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1463.903954,
+   "vs": 1650,
+   "score": 165.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1485.719807,
+   "vs": 1652,
+   "score": 165.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1507.534256,
+   "vs": 1655,
+   "score": 165.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1529.347087,
+   "vs": 1656,
+   "score": 165.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1572.967241,
+   "vs": 1657,
+   "score": 165.7,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1594.775542,
+   "vs": 1658,
+   "score": 165.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1616.580267,
+   "vs": 1659,
+   "score": 165.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1725.56877,
+   "vs": 1660,
+   "score": 166.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1769.144478,
+   "vs": 1661,
+   "score": 166.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1790.926089,
+   "vs": 1662,
+   "score": 166.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1812.705572,
+   "vs": 1663,
+   "score": 166.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1834.481471,
+   "vs": 1665,
+   "score": 166.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1899.78679,
+   "vs": 1666,
+   "score": 166.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1927.416932,
+   "vs": 2210,
+   "score": 221.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1928.377908,
+   "vs": 2213,
+   "score": 221.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1931.834475,
+   "vs": 2214,
+   "score": 221.4,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1938.376611,
+   "vs": 2215,
+   "score": 221.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1963.269415,
+   "vs": 2216,
+   "score": 221.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1973.26568,
+   "vs": 2223,
+   "score": 222.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1974.622105,
+   "vs": 2225,
+   "score": 222.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1979.679008,
+   "vs": 2226,
+   "score": 222.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1987.795711,
+   "vs": 2227,
+   "score": 222.7,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 2025.038059,
+   "vs": 2228,
+   "score": 222.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 2040.389974,
+   "vs": 2229,
+   "score": 222.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 2056.732142,
+   "vs": 2231,
+   "score": 223.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 2073.876278,
+   "vs": 2233,
+   "score": 223.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 2109.994436,
+   "vs": 2235,
+   "score": 223.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 2128.759683,
+   "vs": 2236,
+   "score": 223.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 2147.89122,
+   "vs": 2239,
+   "score": 223.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  }
+ ],
+ "wall_s": 420.3727514743805,
+ "n_solves": 145,
+ "peak_mb": 128.97265625,
+ "all_optimal": true,
+ "timeout": false,
+ "not_optimal_points": [],
+ "instance": "n6_s0",
+ "method": "M5",
+ "machine": {
+  "host": "Taeuk_Desktop",
+  "cpu": "Intel64 Family 6 Model 191 Stepping 2, GenuineIntel",
+  "cores_physical": 10,
+  "cores_logical": 16,
+  "os": "Windows-10-10.0.26200-SP0",
+  "python": "3.10.11"
+ },
+ "finished_utc": "2026-11-08T16:23:56Z"
+}

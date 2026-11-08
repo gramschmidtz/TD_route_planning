@@ -1,13 +1,14 @@
 """
 Run the benchmark methods on instances (resumable: a finished front file is skipped).
 
-    python -W ignore -m bench.run --inst n4_s0 n4_s1 --methods M0 M4 M1 M2 M5 M3 --threads 1
+    python -W ignore -m bench.run --inst n4_s0 n4_s1 --methods M0 M5 M3gen M1 M2 M3time --threads 1
 
 Order inside one instance: M0 first (its wall time is M3's time budget).
-Method keys: M0, M1_11, M1_101, M2_100, M2_50, M2_10, M3_gen_s<seed>, M3_time_s<seed>, M4, M5.
+Method keys: M0, M1_11, M1_101, M2_100, M2_50, M2_10, M3_gen_s<seed>, M3_time_s<seed>, M5.
+M4 (label-setting DP) is no longer part of the comparison; `--methods M4` still runs it.
 
 Helper mode (use idle physical cores without changing any timing condition):
-    python -W ignore -m bench.run --helper --inst n6_s2 n5_s2 --methods M4 M3gen M3time --seeds 5 6 7 8 9
+    python -W ignore -m bench.run --helper --inst n6_s2 n5_s2 --methods M3gen M3time --seeds 5 6 7 8 9
   never computes M0; runs the listed methods for every instance first, then the
   M3time seeds, waiting (polling every 60 s) until that instance's M0 front exists.
   The instance's own process must then be started with the complementary set, e.g.
@@ -67,7 +68,7 @@ def run_one(inst, key, fn):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--inst", nargs="*", default=[])
-    ap.add_argument("--methods", nargs="+", default=["M0", "M4", "M5", "M3gen", "M1", "M2"])
+    ap.add_argument("--methods", nargs="+", default=["M0", "M5", "M3gen", "M1", "M2"])  # M4 (DP) dropped from the comparison (user, 2026-11-09)
     ap.add_argument("--threads", type=int, default=1)
     ap.add_argument("--time-limit", type=float, default=600)
     ap.add_argument("--dp-limit", type=float, default=7200)
@@ -76,7 +77,7 @@ def main():
     ap.add_argument("--helper", action="store_true",
                     help="never run M0; M3time waits for the instance's M0 front")
     ap.add_argument("--calib", action="store_true",
-                    help="machine calibration: re-run M0 and M4 of n4_s0 as CALIB_<host>_*")
+                    help="machine calibration: re-run M0 of n4_s0 as CALIB_<host>_M0")
     a = ap.parse_args()
     cfg, data = load()
     dvmax = dv_max_mps(cfg)
@@ -97,7 +98,6 @@ def main():
         sd, sc = sub_instance(data, cfg, by["n4_s0"]["ids"], threads=a.threads,
                               time_limit=a.time_limit)
         run_one("n4_s0", f"{tag}_M0", lambda: M._exact_run(M.ExactFront, sd, sc, "n4_s0", tag))
-        run_one("n4_s0", f"{tag}_M4", lambda: m4(sd, dvmax, time_limit=a.dp_limit))
     def m3time(name, sd, r0):
         for s in a.seeds:
             run_one(name, f"M3_time_s{s}", lambda: m3(sd, dvmax, s, time_s=r0["wall_s"]))

@@ -1,0 +1,917 @@
+{
+ "points": [
+  {
+   "dv": 0.0,
+   "vs": 1000,
+   "score": 100.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 119.307749,
+   "vs": 1611,
+   "score": 161.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 120.055812,
+   "vs": 1612,
+   "score": 161.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 122.765452,
+   "vs": 1613,
+   "score": 161.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 127.310405,
+   "vs": 1615,
+   "score": 161.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 141.122271,
+   "vs": 1616,
+   "score": 161.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 147.016535,
+   "vs": 1625,
+   "score": 162.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 161.947866,
+   "vs": 1662,
+   "score": 166.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 170.349155,
+   "vs": 1663,
+   "score": 166.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 266.324284,
+   "vs": 2331,
+   "score": 233.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 267.072347,
+   "vs": 2332,
+   "score": 233.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 267.891477,
+   "vs": 2333,
+   "score": 233.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 270.601118,
+   "vs": 2334,
+   "score": 233.4,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 274.32694,
+   "vs": 2335,
+   "score": 233.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 275.14607,
+   "vs": 2336,
+   "score": 233.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 281.255615,
+   "vs": 2344,
+   "score": 234.4,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 282.003678,
+   "vs": 2345,
+   "score": 234.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 284.713318,
+   "vs": 2346,
+   "score": 234.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 289.258271,
+   "vs": 2348,
+   "score": 234.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 297.659559,
+   "vs": 2349,
+   "score": 234.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 308.964401,
+   "vs": 2358,
+   "score": 235.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 317.36569,
+   "vs": 2359,
+   "score": 235.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 337.132018,
+   "vs": 2360,
+   "score": 236.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 350.21979,
+   "vs": 2361,
+   "score": 236.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 364.905354,
+   "vs": 2362,
+   "score": 236.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 380.862356,
+   "vs": 2363,
+   "score": 236.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 397.82649,
+   "vs": 2364,
+   "score": 236.4,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 415.59309,
+   "vs": 2365,
+   "score": 236.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 434.002264,
+   "vs": 2366,
+   "score": 236.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 452.930093,
+   "vs": 2367,
+   "score": 236.7,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 472.280049,
+   "vs": 2368,
+   "score": 236.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 488.993995,
+   "vs": 2837,
+   "score": 283.7,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 489.742058,
+   "vs": 2838,
+   "score": 283.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 490.561188,
+   "vs": 2839,
+   "score": 283.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 493.270828,
+   "vs": 2840,
+   "score": 284.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 496.99665,
+   "vs": 2841,
+   "score": 284.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 497.815781,
+   "vs": 2842,
+   "score": 284.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 511.627648,
+   "vs": 2843,
+   "score": 284.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 516.563684,
+   "vs": 2906,
+   "score": 290.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 517.311746,
+   "vs": 2907,
+   "score": 290.7,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 520.021387,
+   "vs": 2908,
+   "score": 290.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 524.566339,
+   "vs": 2910,
+   "score": 291.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 532.967628,
+   "vs": 2911,
+   "score": 291.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 544.27247,
+   "vs": 2920,
+   "score": 292.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 552.673758,
+   "vs": 2921,
+   "score": 292.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 572.440087,
+   "vs": 2922,
+   "score": 292.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 585.527859,
+   "vs": 2923,
+   "score": 292.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 600.213423,
+   "vs": 2924,
+   "score": 292.4,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 616.170424,
+   "vs": 2925,
+   "score": 292.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 633.134559,
+   "vs": 2926,
+   "score": 292.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 650.901159,
+   "vs": 2927,
+   "score": 292.7,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 669.310333,
+   "vs": 2928,
+   "score": 292.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 688.238161,
+   "vs": 2929,
+   "score": 292.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 707.588118,
+   "vs": 2930,
+   "score": 293.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 724.302064,
+   "vs": 3615,
+   "score": 361.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 725.050126,
+   "vs": 3616,
+   "score": 361.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 725.869257,
+   "vs": 3617,
+   "score": 361.7,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 728.578897,
+   "vs": 3618,
+   "score": 361.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 732.304719,
+   "vs": 3619,
+   "score": 361.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 733.123849,
+   "vs": 3620,
+   "score": 362.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 742.991199,
+   "vs": 3621,
+   "score": 362.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 754.620234,
+   "vs": 3622,
+   "score": 362.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 765.601571,
+   "vs": 3623,
+   "score": 362.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 775.468921,
+   "vs": 3624,
+   "score": 362.4,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 786.138557,
+   "vs": 3625,
+   "score": 362.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 797.767592,
+   "vs": 3626,
+   "score": 362.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 813.095182,
+   "vs": 3627,
+   "score": 362.7,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 831.479349,
+   "vs": 3628,
+   "score": 362.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 854.749977,
+   "vs": 3629,
+   "score": 362.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 879.935267,
+   "vs": 3630,
+   "score": 363.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 895.67467,
+   "vs": 3631,
+   "score": 363.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 907.303705,
+   "vs": 3632,
+   "score": 363.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 922.631295,
+   "vs": 3633,
+   "score": 363.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 941.015462,
+   "vs": 3634,
+   "score": 363.4,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 956.595571,
+   "vs": 3635,
+   "score": 363.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 971.923161,
+   "vs": 3636,
+   "score": 363.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 990.307329,
+   "vs": 3637,
+   "score": 363.7,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1020.379079,
+   "vs": 3638,
+   "score": 363.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1038.763247,
+   "vs": 3639,
+   "score": 363.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1051.809042,
+   "vs": 3640,
+   "score": 364.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1066.131684,
+   "vs": 3641,
+   "score": 364.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1081.459274,
+   "vs": 3642,
+   "score": 364.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1099.843442,
+   "vs": 3643,
+   "score": 364.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1123.030507,
+   "vs": 3644,
+   "score": 364.4,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1147.192083,
+   "vs": 3645,
+   "score": 364.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1172.143919,
+   "vs": 3646,
+   "score": 364.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1197.742837,
+   "vs": 3647,
+   "score": 364.7,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1223.873604,
+   "vs": 3648,
+   "score": 364.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1267.366404,
+   "vs": 3649,
+   "score": 364.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1281.820394,
+   "vs": 3650,
+   "score": 365.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1292.490031,
+   "vs": 3651,
+   "score": 365.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1304.119066,
+   "vs": 3652,
+   "score": 365.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1319.446656,
+   "vs": 3653,
+   "score": 365.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1337.830823,
+   "vs": 3654,
+   "score": 365.4,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1356.629334,
+   "vs": 3655,
+   "score": 365.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1375.452241,
+   "vs": 3656,
+   "score": 365.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1394.295008,
+   "vs": 3657,
+   "score": 365.7,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1413.159718,
+   "vs": 3658,
+   "score": 365.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1428.982769,
+   "vs": 3659,
+   "score": 365.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1447.366936,
+   "vs": 3660,
+   "score": 366.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1462.947045,
+   "vs": 3661,
+   "score": 366.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1478.274635,
+   "vs": 3662,
+   "score": 366.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1496.658803,
+   "vs": 3663,
+   "score": 366.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1515.457314,
+   "vs": 3664,
+   "score": 366.4,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1534.28022,
+   "vs": 3665,
+   "score": 366.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1553.122987,
+   "vs": 3666,
+   "score": 366.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1571.987698,
+   "vs": 3667,
+   "score": 366.7,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1587.810748,
+   "vs": 3668,
+   "score": 366.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1606.194916,
+   "vs": 3669,
+   "score": 366.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1624.993426,
+   "vs": 3670,
+   "score": 367.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1643.816333,
+   "vs": 3671,
+   "score": 367.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1662.6591,
+   "vs": 3672,
+   "score": 367.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1681.523811,
+   "vs": 3673,
+   "score": 367.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1704.710875,
+   "vs": 3674,
+   "score": 367.4,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1728.872451,
+   "vs": 3675,
+   "score": 367.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1753.824288,
+   "vs": 3676,
+   "score": 367.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1779.423206,
+   "vs": 3677,
+   "score": 367.7,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1805.553973,
+   "vs": 3678,
+   "score": 367.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1849.046773,
+   "vs": 3679,
+   "score": 367.9,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1895.891503,
+   "vs": 3680,
+   "score": 368.0,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1914.734269,
+   "vs": 3681,
+   "score": 368.1,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1933.59898,
+   "vs": 3682,
+   "score": 368.2,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1956.786045,
+   "vs": 3683,
+   "score": 368.3,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 1980.947621,
+   "vs": 3684,
+   "score": 368.4,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 2005.899457,
+   "vs": 3685,
+   "score": 368.5,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 2031.498375,
+   "vs": 3686,
+   "score": 368.6,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 2057.629142,
+   "vs": 3687,
+   "score": 368.7,
+   "optimal": true,
+   "mip_gap": 0.0
+  },
+  {
+   "dv": 2111.145512,
+   "vs": 3688,
+   "score": 368.8,
+   "optimal": true,
+   "mip_gap": 0.0
+  }
+ ],
+ "wall_s": 2217.8102457523346,
+ "n_solves": 257,
+ "peak_mb": 154.14453125,
+ "all_optimal": true,
+ "timeout": false,
+ "not_optimal_points": [],
+ "instance": "n6_s0",
+ "method": "M0",
+ "machine": {
+  "host": "Taeuk_Desktop",
+  "cpu": "Intel64 Family 6 Model 191 Stepping 2, GenuineIntel",
+  "cores_physical": 10,
+  "cores_logical": 16,
+  "os": "Windows-10-10.0.26200-SP0",
+  "python": "3.10.11"
+ },
+ "finished_utc": "2026-11-08T16:16:40Z"
+}
