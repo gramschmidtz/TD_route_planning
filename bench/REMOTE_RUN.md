@@ -8,9 +8,10 @@
 |---|---|
 | 이 컴퓨터 | n6_s2, n6_s1, n5_s2, n5_s1, n5_s0, n4_s2 (`bench/instances.json`) |
 
-> **변경 (2026-11-09): DP(M4)는 비교에서 뺐다.** 이미 도우미를 M4 포함으로 띄웠다면 도우미 2개만 멈추고 `git pull` 후 아래 명령으로 다시 띄운다.
-> 인스턴스 프로세스는 M4 를 돌리지 않으므로 그대로 둬도 된다. 다시 띄워도 M0·M5 는 체크포인트에서 이어 푼다.
-> 이미 생긴 `*__M4.json` 은 지우지 않아도 된다(보고서에서 제외).
+> **변경 (2026-11-09): DP(M4)와 M3 시간 예산 설정(M3time)은 비교에서 뺐다.**
+> 지금 M4 나 M3time 을 계산 중인 프로세스(도우미 포함)는 멈춘다. `git pull` 후, 아직 M0·M5·M1·M2·M3gen 이 남은 인스턴스만 아래 명령으로 다시 띄운다.
+> 다시 띄워도 M0·M5 는 체크포인트에서 이어 풀고, 끝난 방법은 건너뛴다.
+> 이미 생긴 `*__M4.json`, `*__M3_time_s*.json` 은 지우지 않아도 된다(보고서에서 제외).
 
 ## 1. 준비 (한 번)
 
@@ -47,21 +48,15 @@ python -W ignore -m bench.run --calib
 - CPLEX 는 1스레드(기본값). 동시에 띄우는 프로세스 수는 **물리 코어 수 − 2 이하**로 한다(6개면 물리 코어 8개 이상).
 - 계산 중에는 다른 무거운 작업을 하지 않는다.
 
-**8개 프로세스 = 물리 코어 8개.** 인스턴스 프로세스 6개 + 도우미 2개로 나눈다.
-- **인스턴스 프로세스:** M0, M5, M1, M2, M3gen, M3time 을 시드 0–4 로 계산한다.
-- **도우미:** M3gen, M3time 을 시드 5–9 로 계산한다. M3time 은 그 인스턴스의 M0 가 끝날 때까지 기다린다.
-
-두 쪽이 맡는 방법·시드가 겹치지 않아 같은 파일을 두 번 계산하지 않는다. 각 프로세스는 1스레드라서 시간 조건은 그대로다.
+**인스턴스 하나당 프로세스 하나(6개).** 도우미는 더 이상 필요 없다(DP·M3 시간 예산 설정을 뺐기 때문).
 
 PowerShell (같은 창에서 `$env:CPLEX_PATH` 설정 후, **한 번만** 실행):
 ```
 foreach ($i in "n6_s2","n6_s1","n5_s2","n5_s1","n5_s0","n4_s2") {
-  Start-Process -NoNewWindow -FilePath python -ArgumentList "-W ignore -m bench.run --inst $i --methods M0 M5 M1 M2 M3gen M3time --seeds 0 1 2 3 4" -RedirectStandardOutput "bench_remote_$i.log" -RedirectStandardError "bench_remote_$i.err"
+  Start-Process -NoNewWindow -FilePath python -ArgumentList "-W ignore -m bench.run --inst $i --methods M0 M5 M1 M2 M3gen" -RedirectStandardOutput "bench_remote_$i.log" -RedirectStandardError "bench_remote_$i.err"
 }
-Start-Process -NoNewWindow -FilePath python -ArgumentList "-W ignore -m bench.run --helper --inst n6_s2 n5_s0 n4_s2 --methods M3gen M3time --seeds 5 6 7 8 9" -RedirectStandardOutput "bench_remote_helperA.log" -RedirectStandardError "bench_remote_helperA.err"
-Start-Process -NoNewWindow -FilePath python -ArgumentList "-W ignore -m bench.run --helper --inst n6_s1 n5_s2 n5_s1 --methods M3gen M3time --seeds 5 6 7 8 9" -RedirectStandardOutput "bench_remote_helperB.log" -RedirectStandardError "bench_remote_helperB.err"
 ```
-실행 중인 bench 프로세스 수 확인 (8 이어야 한다):
+실행 중인 bench 프로세스 수 확인 (6 이어야 한다):
 ```
 (Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like '*bench.run*' }).Count
 ```
@@ -75,7 +70,6 @@ Start-Process -NoNewWindow -FilePath python -ArgumentList "-W ignore -m bench.ru
 | M3gen | NSGA-II pop 200 × 250세대, 시드 10개. 각 수 초 |
 | M1 | 가중합, λ 11개와 101개 |
 | M2 | ΔV 격자, δ = 100 / 50 / 10 |
-| M3time | NSGA-II 를 시드마다 M0 시간만큼. 인스턴스 프로세스와 도우미가 5개씩 나눠 M0 시간의 약 5배 |
 
 **중단·재시작:** 같은 명령을 다시 실행하면 이어서 계산한다.
 - 끝난 방법은 `bench/out/fronts/<인스턴스>__<방법>.json` 이 있으면 건너뛴다.
@@ -94,9 +88,3 @@ git commit -m "bench: remote results (<호스트이름>)"
 git push -u origin bench-remote-<호스트이름>
 ```
 메인 PC 에서는 이 브랜치의 `bench/out/fronts/` 만 가져와 `python -W ignore -m bench.report` 로 지표·그림·요약표를 만든다.
-
-## 5. 시드를 줄여야 할 때 (A9 덧붙임 2)
-
-M3time 이 너무 길면(예: n6 에서 M0 가 3시간 → M3time 30시간) 시드 수를 줄일 수 있다.
-줄였다면 줄인 인스턴스와 시드 수를 커밋 메시지와 `bench/out/fronts/REMOTE_NOTES.md` 에 적는다.
-`bench/run.py` 의 `SEEDS = range(10)` 을 바꾸지 말고, 해당 인스턴스만 `--methods M3time` 실행을 중단하면 된다(끝난 시드 파일만 남는다).

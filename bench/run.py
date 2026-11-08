@@ -1,11 +1,12 @@
 """
 Run the benchmark methods on instances (resumable: a finished front file is skipped).
 
-    python -W ignore -m bench.run --inst n4_s0 n4_s1 --methods M0 M5 M3gen M1 M2 M3time --threads 1
+    python -W ignore -m bench.run --inst n4_s0 n4_s1 --methods M0 M5 M3gen M1 M2 --threads 1
 
 Order inside one instance: M0 first (its wall time is M3's time budget).
 Method keys: M0, M1_11, M1_101, M2_100, M2_50, M2_10, M3_gen_s<seed>, M3_time_s<seed>, M5.
-M4 (label-setting DP) is no longer part of the comparison; `--methods M4` still runs it.
+M4 (label-setting DP) and M3time (NSGA-II with M0's wall time) are no longer part of the
+comparison (user, 2026-11-09); `--methods M4` / `--methods M3time` still run them.
 
 Helper mode (use idle physical cores without changing any timing condition):
     python -W ignore -m bench.run --helper --inst n6_s2 n5_s2 --methods M3gen M3time --seeds 5 6 7 8 9

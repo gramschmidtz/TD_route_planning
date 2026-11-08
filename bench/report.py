@@ -157,7 +157,9 @@ def family(m):
 
 # M4 (DP) is excluded from the comparison (user decision 2026-11-09); its fronts, where they
 # exist, are only used in crosscheck.json as a check of P*.
-ORDER = ["M0", "M1_11", "M1_101", "M2_100", "M2_50", "M2_10", "M3_gen", "M3_time", "M5"]
+# M3_time (NSGA-II with M0's wall time) is excluded as well (user decision 2026-11-09).
+ORDER = ["M0", "M1_11", "M1_101", "M2_100", "M2_50", "M2_10", "M3_gen", "M5"]
+EXCLUDED = ("M4", "M3_time")
 COL = {"M0": NAVY, "M1_11": "#E0A030", "M1_101": "#B07818", "M2_100": "#8FB3D9",
        "M2_50": "#4F7FB8", "M2_10": "#2D5591", "M3_gen": RED, "M3_time": "#E07A84",
        "M4": GREY, "M5": "#5E9E6E"}
@@ -184,7 +186,7 @@ def main():
                            "identical": (not r4["timeout"]) and all(a) and all(b),
                            "m0_missing_vs_m4": sum(not x for x in b) if not r4["timeout"] else None})
         for meth, res in D[name].items():
-            if meth.startswith("CALIB_") or meth == "M4":
+            if meth.startswith("CALIB_") or family(meth) in EXCLUDED:
                 continue
             m = metrics(P, sup, res)
             rows.append({"instance": name, "n": inst[name]["n"], "set": inst[name]["set"],
