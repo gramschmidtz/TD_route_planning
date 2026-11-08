@@ -43,17 +43,23 @@ python -W ignore -m bench.run --calib
 - CPLEX 는 1스레드(기본값). 동시에 띄우는 프로세스 수는 **물리 코어 수 − 2 이하**로 한다(6개면 물리 코어 8개 이상).
 - 계산 중에는 다른 무거운 작업을 하지 않는다.
 
-PowerShell (6개 동시, 로그는 `bench_remote_<인스턴스>.log`):
+**8개 프로세스 = 물리 코어 8개.** 인스턴스 프로세스 6개 + 도우미 2개로 나눈다.
+- **인스턴스 프로세스:** M0, M5, M1, M2, M3gen, M3time 을 시드 0–4 로 계산한다.
+- **도우미:** M4, M3gen, M3time 을 시드 5–9 로 계산한다. M3time 은 그 인스턴스의 M0 가 끝날 때까지 기다린다.
+
+두 쪽이 맡는 방법·시드가 겹치지 않아 같은 파일을 두 번 계산하지 않는다. 각 프로세스는 1스레드라서 시간 조건은 그대로다.
+
+PowerShell (같은 창에서 `$env:CPLEX_PATH` 설정 후, **한 번만** 실행):
 ```
 foreach ($i in "n6_s2","n6_s1","n5_s2","n5_s1","n5_s0","n4_s2") {
-  Start-Process -NoNewWindow -FilePath python -ArgumentList "-W ignore -m bench.run --inst $i --methods M0 M4 M5 M3gen M1 M2 M3time" -RedirectStandardOutput "bench_remote_$i.log" -RedirectStandardError "bench_remote_$i.err"
+  Start-Process -NoNewWindow -FilePath python -ArgumentList "-W ignore -m bench.run --inst $i --methods M0 M5 M1 M2 M3gen M3time --seeds 0 1 2 3 4" -RedirectStandardOutput "bench_remote_$i.log" -RedirectStandardError "bench_remote_$i.err"
 }
+Start-Process -NoNewWindow -FilePath python -ArgumentList "-W ignore -m bench.run --helper --inst n6_s2 n5_s0 n4_s2 --methods M4 M3gen M3time --seeds 5 6 7 8 9" -RedirectStandardOutput "bench_remote_helperA.log" -RedirectStandardError "bench_remote_helperA.err"
+Start-Process -NoNewWindow -FilePath python -ArgumentList "-W ignore -m bench.run --helper --inst n6_s1 n5_s2 n5_s1 --methods M4 M3gen M3time --seeds 5 6 7 8 9" -RedirectStandardOutput "bench_remote_helperB.log" -RedirectStandardError "bench_remote_helperB.err"
 ```
-bash:
+실행 중인 bench 프로세스 수 확인 (8 이어야 한다):
 ```
-for i in n6_s2 n6_s1 n5_s2 n5_s1 n5_s0 n4_s2; do
-  nohup python -W ignore -m bench.run --inst $i --methods M0 M4 M5 M3gen M1 M2 M3time > bench_remote_$i.log 2>&1 &
-done
+(Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like '*bench.run*' }).Count
 ```
 
 방법 순서와 대략의 양(인스턴스 하나당):
@@ -66,7 +72,7 @@ done
 | M3gen | NSGA-II pop 200 × 250세대, 시드 10개. 각 수 초 |
 | M1 | 가중합, λ 11개와 101개 |
 | M2 | ΔV 격자, δ = 100 / 50 / 10 |
-| M3time | NSGA-II 를 시드마다 M0 시간만큼. 시드 10개라 M0 시간의 10배가 걸린다 |
+| M3time | NSGA-II 를 시드마다 M0 시간만큼. 인스턴스 프로세스와 도우미가 5개씩 나눠 M0 시간의 약 5배 |
 
 **중단·재시작:** 같은 명령을 다시 실행하면 이어서 계산한다.
 - 끝난 방법은 `bench/out/fronts/<인스턴스>__<방법>.json` 이 있으면 건너뛴다.

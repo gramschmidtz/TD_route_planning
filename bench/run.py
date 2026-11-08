@@ -5,6 +5,14 @@ Run the benchmark methods on instances (resumable: a finished front file is skip
 
 Order inside one instance: M0 first (its wall time is M3's time budget).
 Method keys: M0, M1_11, M1_101, M2_100, M2_50, M2_10, M3_gen_s<seed>, M3_time_s<seed>, M4, M5.
+
+Helper mode (use idle physical cores without changing any timing condition):
+    python -W ignore -m bench.run --helper --inst n6_s2 n5_s2 --methods M4 M3gen M3time --seeds 5 6 7 8 9
+  never computes M0; runs the listed methods for every instance first, then the
+  M3time seeds, waiting (polling every 60 s) until that instance's M0 front exists.
+  The instance's own process must then be started with the complementary set, e.g.
+    --methods M0 M5 M1 M2 M3time --seeds 0 1 2 3 4
+  (disjoint method/seed sets, so two processes never compute the same file).
 """
 from __future__ import annotations
 
@@ -63,6 +71,10 @@ def main():
     ap.add_argument("--threads", type=int, default=1)
     ap.add_argument("--time-limit", type=float, default=600)
     ap.add_argument("--dp-limit", type=float, default=7200)
+    ap.add_argument("--seeds", type=int, nargs="+", default=list(SEEDS),
+                    help="M3 seeds handled by this process (default 0-9)")
+    ap.add_argument("--helper", action="store_true",
+                    help="never run M0; M3time waits for the instance's M0 front")
     ap.add_argument("--calib", action="store_true",
                     help="machine calibration: re-run M0 and M4 of n4_s0 as CALIB_<host>_*")
     a = ap.parse_args()
@@ -86,10 +98,20 @@ def main():
                               time_limit=a.time_limit)
         run_one("n4_s0", f"{tag}_M0", lambda: M._exact_run(M.ExactFront, sd, sc, "n4_s0", tag))
         run_one("n4_s0", f"{tag}_M4", lambda: m4(sd, dvmax, time_limit=a.dp_limit))
+    def m3time(name, sd, r0):
+        for s in a.seeds:
+            run_one(name, f"M3_time_s{s}", lambda: m3(sd, dvmax, s, time_s=r0["wall_s"]))
+
+    def wait_m0(name):
+        while load_front(name, "M0") is None:
+            time.sleep(60)
+        return load_front(name, "M0")
+
+    later = []
     for name in a.inst or []:
         ins = by[name]
         sd, sc = sub_instance(data, cfg, ins["ids"], threads=a.threads, time_limit=a.time_limit)
-        r0 = run_one(name, "M0", lambda: M.m0(sd, sc, name))
+        r0 = None if a.helper else run_one(name, "M0", lambda: M.m0(sd, sc, name))
         for m in a.methods:
             if m == "M4":
                 run_one(name, "M4", lambda: m4(sd, dvmax, time_limit=a.dp_limit))
@@ -102,12 +124,15 @@ def main():
             elif m == "M5":
                 run_one(name, "M5", lambda: M.m5(sd, sc, name))
             elif m in ("M3", "M3gen"):
-                for s in SEEDS:
+                for s in a.seeds:
                     run_one(name, f"M3_gen_s{s}", lambda: m3(sd, dvmax, s))
             if m in ("M3", "M3time"):
-                for s in SEEDS:
-                    run_one(name, f"M3_time_s{s}", lambda: m3(sd, dvmax, s, time_s=r0["wall_s"]))
-
+                if a.helper:
+                    later.append((name, sd))
+                else:
+                    m3time(name, sd, r0)
+    for name, sd in later:                      # helper: M3time after all other work
+        m3time(name, sd, wait_m0(name))
 
 if __name__ == "__main__":
     main()
