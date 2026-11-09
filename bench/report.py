@@ -155,7 +155,11 @@ def family(m):
     return m
 
 
-ORDER = ["M0", "M1_11", "M1_101", "M2_100", "M2_50", "M2_10", "M3_gen", "M3_time", "M4", "M5"]
+# M4 (DP) is excluded from the comparison (user decision 2026-11-09); its fronts, where they
+# exist, are only used in crosscheck.json as a check of P*.
+# M3_time (NSGA-II with M0's wall time) is excluded as well (user decision 2026-11-09).
+ORDER = ["M0", "M1_11", "M1_101", "M2_100", "M2_50", "M2_10", "M3_gen", "M5"]
+EXCLUDED = ("M4", "M3_time")
 COL = {"M0": NAVY, "M1_11": "#E0A030", "M1_101": "#B07818", "M2_100": "#8FB3D9",
        "M2_50": "#4F7FB8", "M2_10": "#2D5591", "M3_gen": RED, "M3_time": "#E07A84",
        "M4": GREY, "M5": "#5E9E6E"}
@@ -174,7 +178,7 @@ def main():
         cross.setdefault(name, {})["m0_unproven"] = m0_unproven(name)
         cross[name]["n_supported"] = sum(sup)
         cross[name]["n_nonsupported"] = len(sup) - sum(sup)
-        if "M4" in D[name]:
+        if "M4" in D[name] and not D[name]["M4"].get("skipped"):   # skip placeholder files
             r4 = D[name]["M4"]
             a, b = match(P, r4["points"]), match(r4["points"], P)
             cross[name].update({"m0_points": len(P), "m4_points": len(r4["points"]),
@@ -182,7 +186,7 @@ def main():
                            "identical": (not r4["timeout"]) and all(a) and all(b),
                            "m0_missing_vs_m4": sum(not x for x in b) if not r4["timeout"] else None})
         for meth, res in D[name].items():
-            if meth.startswith("CALIB_"):
+            if meth.startswith("CALIB_") or family(meth) in EXCLUDED:
                 continue
             m = metrics(P, sup, res)
             rows.append({"instance": name, "n": inst[name]["n"], "set": inst[name]["set"],
@@ -286,7 +290,7 @@ def fig_scaling(rows):
     ns = sorted({r["n"] for r in rows})
     fig, ax = plt.subplots(figsize=(8, 4.8))
     for m, lab in [("M0", "M0 proposed"), ("M2_10", "M2 ΔV-grid ε (δ = 10)"),
-                   ("M3_gen", "M3 NSGA-II (pop 200 × 250 gen)"), ("M4", "M4 label-setting DP")]:
+                   ("M3_gen", "M3 NSGA-II (pop 200 × 250 gen)"), ("M5", "M5 no waiting")]:
         xs, ys, to = [], [], []
         for n in ns:
             v = _agg(rows, m, n, "wall_s")
